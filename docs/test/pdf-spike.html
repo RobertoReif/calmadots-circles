@@ -4,7 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CircleSize - PDF Export Technical Spike</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <!-- Load jsPDF and dependencies -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://unpkg.com/jspdf@latest/dist/jspdf.umd.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -534,8 +536,17 @@ circle_radius = min_radius + (normalized_darkness * (max_radius - min_radius))
                 // Get canvas as PNG
                 const imageDataURL = canvas.toDataURL('image/png');
 
-                // Create PDF
-                const pdf = new window.jsPDF('p', 'mm', 'a4');
+                // Create PDF - handle different jsPDF load methods
+                let pdf;
+                if (typeof jsPDF !== 'undefined') {
+                    // Direct jsPDF object
+                    pdf = new jsPDF('p', 'mm', 'a4');
+                } else if (typeof window.jsPDF !== 'undefined') {
+                    // jsPDF as window property
+                    pdf = new window.jsPDF('p', 'mm', 'a4');
+                } else {
+                    throw new Error('jsPDF library failed to load. Please refresh the page.');
+                }
                 const pdfWidth = 210; // A4 width in mm
                 const aspectRatio = canvas.height / canvas.width;
                 let pdfHeight = pdfWidth * aspectRatio;

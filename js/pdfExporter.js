@@ -6,7 +6,22 @@
 
 class PDFExporter {
     constructor() {
-        this.pdfLibraryLoaded = typeof jsPDF !== 'undefined';
+        this.pdfLibraryLoaded = typeof jsPDF !== 'undefined' || typeof window.jsPDF !== 'undefined';
+    }
+
+    /**
+     * Get jsPDF constructor (handles different loading methods)
+     * @returns {function} jsPDF constructor
+     * @throws {Error} If jsPDF is not loaded
+     */
+    getJsPDFConstructor() {
+        if (typeof jsPDF !== 'undefined') {
+            return jsPDF;
+        } else if (typeof window.jsPDF !== 'undefined') {
+            return window.jsPDF;
+        } else {
+            throw new Error('jsPDF library not loaded');
+        }
     }
 
     /**
@@ -66,7 +81,8 @@ class PDFExporter {
             }
 
             // Create PDF document
-            const pdf = new jsPDF('p', 'mm', 'a4');
+            const JsPDFConstructor = this.getJsPDFConstructor();
+            const pdf = new JsPDFConstructor('p', 'mm', 'a4');
 
             // Add title
             pdf.setFontSize(16);
