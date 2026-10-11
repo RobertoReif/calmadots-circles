@@ -4,13 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CircleSize - PDF Export Technical Spike</title>
-    <!-- Load jsPDF from jsDelivr CDN -->
-    <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+    <!-- Load jsPDF locally -->
+    <script src="../js/jspdf.umd.min.js"></script>
     <script>
         // Check if jsPDF loaded successfully
         window.addEventListener('load', () => {
             if (typeof window.jsPDF === 'undefined' && typeof jsPDF === 'undefined') {
-                console.warn('jsPDF failed to load from CDN');
+                console.warn('jsPDF failed to load');
             } else {
                 console.log('jsPDF loaded successfully');
             }
