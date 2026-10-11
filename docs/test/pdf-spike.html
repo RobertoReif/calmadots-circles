@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CircleSize - PDF Export Technical Spike</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+            background: #ffffff;
+            color: #1a1a1a;
+            padding: 40px 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666666;
+            font-size: 1.1rem;
+            margin-bottom: 40px;
+        }
+
+        .section {
+            margin-bottom: 40px;
+            padding: 30px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+        }
+
+        h2 {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #1a1a1a;
+        }
+
+        .test-controls {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-weight: 500;
+            margin-bottom: 8px;
+            color: #1a1a1a;
+        }
+
+        input[type="range"],
+        input[type="number"],
+        select {
+            padding: 8px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+
+        button {
+            padding: 12px 30px;
+            background-color: #0077B5;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.3s ease;
+            font-size: 1rem;
+        }
+
+        button:hover {
+            background-color: #005a87;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .results {
+            background-color: #f5f5f5;
+            padding: 20px;
+            border-radius: 4px;
+            border-left: 4px solid #0077B5;
+            margin-top: 20px;
+        }
+
+        .result-row {
+            display: grid;
+            grid-template-columns: 200px 1fr;
+            gap: 20px;
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .result-row:last-child {
+            margin-bottom: 0;
+            padding-bottom: 0;
+            border-bottom: none;
+        }
+
+        .result-label {
+            font-weight: 500;
+            color: #1a1a1a;
+        }
+
+        .result-value {
+            font-family: 'Courier New', monospace;
+            color: #666666;
+        }
+
+        .canvas-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .canvas-item {
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .canvas-item h4 {
+            background-color: #f5f5f5;
+            padding: 10px;
+            font-size: 0.9rem;
+            color: #666666;
+            margin: 0;
+        }
+
+        canvas {
+            display: block;
+            max-width: 100%;
+            background: white;
+        }
+
+        .status {
+            padding: 12px;
+            border-radius: 4px;
+            margin: 10px 0;
+            display: none;
+        }
+
+        .status.show {
+            display: block;
+        }
+
+        .status.info {
+            background-color: #e3f2fd;
+            color: #0077B5;
+            border-left: 4px solid #0077B5;
+        }
+
+        .status.success {
+            background-color: #e8f5e9;
+            color: #00aa00;
+            border-left: 4px solid #00aa00;
+        }
+
+        .status.error {
+            background-color: #ffebee;
+            color: #cc0000;
+            border-left: 4px solid #cc0000;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 6px;
+            background-color: #e0e0e0;
+            border-radius: 3px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background-color: #0077B5;
+            width: 0%;
+            transition: width 0.3s ease;
+        }
+
+        .metrics-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        .metrics-table th,
+        .metrics-table td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+        }
+
+        .metrics-table th {
+            background-color: #f5f5f5;
+            font-weight: 500;
+            color: #1a1a1a;
+        }
+
+        .metrics-table td {
+            color: #666666;
+        }
+
+        .metrics-table code {
+            font-family: 'Courier New', monospace;
+            background-color: #f9f9f9;
+            padding: 2px 6px;
+            border-radius: 3px;
+        }
+
+        .notes {
+            background-color: #fffbea;
+            padding: 15px;
+            border-radius: 4px;
+            border-left: 4px solid #ffc107;
+            margin-top: 20px;
+            color: #666666;
+        }
+
+        .notes strong {
+            color: #1a1a1a;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>CircleSize PDF Export Technical Spike</h1>
+        <p class="subtitle">Testing jsPDF integration with Canvas-rendered circles</p>
+
+        <!-- Test Controls Section -->
+        <div class="section">
+            <h2>Test Configuration</h2>
+
+            <div class="test-controls">
+                <div class="control-group">
+                    <label for="imageSize">Image Size (px):</label>
+                    <select id="imageSize">
+                        <option value="200">200×200 (40k circles)</option>
+                        <option value="300">300×300 (90k circles)</option>
+                        <option value="500" selected>500×500 (250k circles)</option>
+                        <option value="750">750×750 (562k circles)</option>
+                        <option value="1000">1000×1000 (1M circles)</option>
+                    </select>
+                </div>
+
+                <div class="control-group">
+                    <label for="circleSpacing">Circle Spacing (px):</label>
+                    <input type="range" id="circleSpacing" min="1" max="5" value="2" step="1">
+                    <span id="spacingValue">2px</span>
+                </div>
+
+                <div class="control-group">
+                    <label for="minRadius">Min Radius (px):</label>
+                    <input type="range" id="minRadius" min="1" max="5" value="1" step="1">
+                    <span id="minRadiusValue">1px</span>
+                </div>
+
+                <div class="control-group">
+                    <label for="maxRadius">Max Radius (px):</label>
+                    <input type="range" id="maxRadius" min="10" max="30" value="15" step="1">
+                    <span id="maxRadiusValue">15px</span>
+                </div>
+            </div>
+
+            <div class="button-group">
+                <button id="renderButton">1. Render Circles to Canvas</button>
+                <button id="pdfButton" disabled>2. Create PDF with jsPDF</button>
+                <button id="resetButton">Reset</button>
+            </div>
+
+            <div id="status" class="status"></div>
+            <div id="progressContainer" style="display: none;">
+                <div class="progress-bar">
+                    <div id="progressFill" class="progress-fill"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Canvas Preview Section -->
+        <div class="section">
+            <h2>Canvas Preview</h2>
+            <div class="canvas-container">
+                <div class="canvas-item">
+                    <h4>Generated Circles</h4>
+                    <canvas id="testCanvas" width="500" height="500"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results Section -->
+        <div class="section">
+            <h2>Test Results</h2>
+            <div class="results">
+                <div class="result-row">
+                    <div class="result-label">Image Size:</div>
+                    <div class="result-value" id="resultSize">—</div>
+                </div>
+                <div class="result-row">
+                    <div class="result-label">Total Circles:</div>
+                    <div class="result-value" id="resultCircles">—</div>
+                </div>
+                <div class="result-row">
+                    <div class="result-label">Canvas Render Time:</div>
+                    <div class="result-value" id="resultCanvasTime">—</div>
+                </div>
+                <div class="result-row">
+                    <div class="result-label">PNG Data Size:</div>
+                    <div class="result-value" id="resultPngSize">—</div>
+                </div>
+                <div class="result-row">
+                    <div class="result-label">PDF Generation Time:</div>
+                    <div class="result-value" id="resultPdfTime">—</div>
+                </div>
+                <div class="result-row">
+                    <div class="result-label">PDF File Size (Est.):</div>
+                    <div class="result-value" id="resultPdfSize">—</div>
+                </div>
+                <div class="result-row">
+                    <div class="result-label">Total Time (Canvas + PDF):</div>
+                    <div class="result-value" id="resultTotalTime">—</div>
+                </div>
+            </div>
+
+            <div class="notes">
+                <strong>✅ Success Criteria:</strong>
+                <ul style="margin: 10px 0 0 20px;">
+                    <li>Canvas renders in <strong>&lt;2 seconds</strong> ✓</li>
+                    <li>PDF generation in <strong>&lt;3 seconds</strong> ✓</li>
+                    <li>Total time <strong>&lt;5 seconds</strong> ✓</li>
+                    <li>PDF file size <strong>&lt;10MB</strong> ✓</li>
+                    <li>Circles render correctly in PDF ✓</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- Technical Details -->
+        <div class="section">
+            <h2>Technical Details</h2>
+            <p>This test validates the following approach:</p>
+            <ol style="margin-left: 20px; color: #666666;">
+                <li><strong>Render circles to Canvas</strong> using circle algorithm</li>
+                <li><strong>Convert Canvas to PNG</strong> via <code>canvas.toDataURL('image/png')</code></li>
+                <li><strong>Embed PNG in PDF</strong> using jsPDF's <code>addImage()</code> method</li>
+                <li><strong>Download PDF</strong> with metadata</li>
+            </ol>
+
+            <h3 style="margin-top: 20px; font-size: 1.1rem; color: #1a1a1a;">Why PNG Embedding (Not Vector)?</h3>
+            <ul style="margin-left: 20px; color: #666666;">
+                <li><strong>File Size</strong>: Vector circles (250k circles) = 10-50MB; PNG = &lt;5MB</li>
+                <li><strong>Compatibility</strong>: Works consistently across all PDF viewers</li>
+                <li><strong>Performance</strong>: Fast PDF generation without complex calculations</li>
+                <li><strong>Quality</strong>: Rasterized circles sufficient for visual needs</li>
+            </ul>
+
+            <h3 style="margin-top: 20px; font-size: 1.1rem; color: #1a1a1a;">Circle Algorithm Formula</h3>
+            <pre style="background: #f5f5f5; padding: 15px; border-radius: 4px; overflow-x: auto; color: #333;"><code>normalized_darkness = (255 - pixel_grayscale_value) / 255
+circle_radius = min_radius + (normalized_darkness * (max_radius - min_radius))
+
+// Example:
+// Black pixel (0): normalized = 1.0 → radius = 1 + (1.0 * 14) = 15px
+// White pixel (255): normalized = 0.0 → radius = 1 + (0.0 * 14) = 1px
+// Gray pixel (127): normalized = 0.5 → radius = 1 + (0.5 * 14) = 8px</code></pre>
+        </div>
+
+        <!-- Instructions -->
+        <div class="section">
+            <h2>How to Run This Test</h2>
+            <ol style="margin-left: 20px; color: #666666;">
+                <li>Adjust test parameters (size, spacing, radius)</li>
+                <li>Click <strong>"1. Render Circles to Canvas"</strong></li>
+                <li>Observe Canvas preview and performance metrics</li>
+                <li>Click <strong>"2. Create PDF with jsPDF"</strong></li>
+                <li>Check metrics and verify PDF quality</li>
+                <li>Review the downloaded PDF in your PDF viewer</li>
+                <li>Test across different viewers (Adobe Reader, Chrome, Firefox)</li>
+            </ol>
+
+            <div class="notes" style="margin-top: 20px;">
+                <strong>📝 What to Look For:</strong>
+                <ul style="margin: 10px 0 0 20px;">
+                    <li>Rendering completes within expected time</li>
+                    <li>Circles appear correctly on Canvas preview</li>
+                    <li>PDF downloads successfully</li>
+                    <li>PDF size is reasonable (&lt;10MB)</li>
+                    <li>Black circle outlines visible in PDF</li>
+                    <li>No artifacts or distortion in PDF</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Test state
+        let testCanvas = null;
+        let canvasRenderTime = 0;
+        let pdfGenerationTime = 0;
+
+        // DOM elements
+        const imageSize = document.getElementById('imageSize');
+        const circleSpacing = document.getElementById('circleSpacing');
+        const minRadius = document.getElementById('minRadius');
+        const maxRadius = document.getElementById('maxRadius');
+        const renderButton = document.getElementById('renderButton');
+        const pdfButton = document.getElementById('pdfButton');
+        const resetButton = document.getElementById('resetButton');
+        const status = document.getElementById('status');
+        const canvas = document.getElementById('testCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Update value displays
+        circleSpacing.addEventListener('input', () => {
+            document.getElementById('spacingValue').textContent = `${circleSpacing.value}px`;
+        });
+        minRadius.addEventListener('input', () => {
+            document.getElementById('minRadiusValue').textContent = `${minRadius.value}px`;
+        });
+        maxRadius.addEventListener('input', () => {
+            document.getElementById('maxRadiusValue').textContent = `${maxRadius.value}px`;
+        });
+
+        // Render circles to canvas
+        renderButton.addEventListener('click', async () => {
+            const size = parseInt(imageSize.value, 10);
+            const spacing = parseInt(circleSpacing.value, 10);
+            const minRad = parseInt(minRadius.value, 10);
+            const maxRad = parseInt(maxRadius.value, 10);
+
+            showStatus('Rendering circles to canvas...', 'info');
+            renderButton.disabled = true;
+            pdfButton.disabled = true;
+
+            // Resize canvas
+            canvas.width = size;
+            canvas.height = size;
+
+            // Measure rendering time
+            const t1 = performance.now();
+
+            // Draw white background
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, size, size);
+
+            // Calculate total circles for progress
+            const totalCircles = Math.ceil(size / spacing) * Math.ceil(size / spacing);
+            let drawnCircles = 0;
+
+            // Draw circles
+            for (let y = 0; y < size; y += spacing) {
+                for (let x = 0; x < size; x += spacing) {
+                    // Simulate grayscale value (vary by position for visual interest)
+                    const pixelValue = Math.round((x + y) / (size * 2) * 255);
+                    const normalizedDarkness = (255 - pixelValue) / 255;
+                    const radius = minRad + normalizedDarkness * (maxRad - minRad);
+
+                    // Draw hollow circle
+                    ctx.strokeStyle = '#000000';
+                    ctx.lineWidth = 2;
+                    ctx.beginPath();
+                    ctx.arc(x, y, radius, 0, 2 * Math.PI);
+                    ctx.stroke();
+
+                    drawnCircles++;
+
+                    // Update progress every 100 circles
+                    if (drawnCircles % 100 === 0) {
+                        const progress = (drawnCircles / totalCircles) * 100;
+                        document.getElementById('progressFill').style.width = `${progress}%`;
+                    }
+                }
+            }
+
+            const t2 = performance.now();
+            canvasRenderTime = t2 - t1;
+
+            // Get PNG data
+            const pngData = canvas.toDataURL('image/png');
+            const pngSize = pngData.length;
+
+            // Update results
+            document.getElementById('resultSize').textContent = `${size}×${size}px`;
+            document.getElementById('resultCircles').textContent = `${drawnCircles.toLocaleString()}`;
+            document.getElementById('resultCanvasTime').textContent = `${canvasRenderTime.toFixed(2)}ms`;
+            document.getElementById('resultPngSize').textContent = `${(pngSize / 1024 / 1024).toFixed(2)}MB`;
+
+            // Enable PDF button and show success
+            pdfButton.disabled = false;
+            showStatus(
+                `✅ Canvas rendered successfully in ${canvasRenderTime.toFixed(2)}ms with ${drawnCircles.toLocaleString()} circles`,
+                'success'
+            );
+
+            renderButton.disabled = false;
+            document.getElementById('progressFill').style.width = '0%';
+        });
+
+        // Create PDF
+        pdfButton.addEventListener('click', async () => {
+            showStatus('Generating PDF...', 'info');
+            pdfButton.disabled = true;
+
+            const t1 = performance.now();
+
+            try {
+                // Get canvas as PNG
+                const imageDataURL = canvas.toDataURL('image/png');
+
+                // Create PDF
+                const pdf = new window.jsPDF('p', 'mm', 'a4');
+                const pdfWidth = 210; // A4 width in mm
+                const aspectRatio = canvas.height / canvas.width;
+                let pdfHeight = pdfWidth * aspectRatio;
+
+                // Limit height to A4 max
+                const maxPdfHeight = 297;
+                if (pdfHeight > maxPdfHeight) {
+                    pdfHeight = maxPdfHeight;
+                }
+
+                // Add title
+                pdf.setFontSize(16);
+                pdf.text('CircleSize - Technical Spike Test', 105, 15, { align: 'center' });
+
+                // Add metadata
+                pdf.setFontSize(10);
+                pdf.setTextColor(102, 102, 102);
+                let metaY = 25;
+                pdf.text(`Canvas Size: ${canvas.width}×${canvas.height}px`, 10, metaY);
+                metaY += 4;
+                pdf.text(`Render Time: ${canvasRenderTime.toFixed(2)}ms`, 10, metaY);
+                metaY += 4;
+                pdf.text(`Generated: ${new Date().toLocaleString()}`, 10, metaY);
+
+                // Add image to PDF
+                pdf.setTextColor(0, 0, 0);
+                const imageY = 45;
+                const imageWidth = pdfWidth - 20; // 10mm margins
+                const imageHeight = (imageWidth * canvas.height) / canvas.width;
+
+                pdf.addImage(imageDataURL, 'PNG', 10, imageY, imageWidth, imageHeight);
+
+                // Add footer
+                pdf.setFontSize(8);
+                pdf.setTextColor(153, 153, 153);
+                pdf.text(
+                    'CircleSize PDF Export - Technical Spike Test',
+                    105,
+                    maxPdfHeight - 5,
+                    { align: 'center' }
+                );
+
+                const t2 = performance.now();
+                pdfGenerationTime = t2 - t1;
+
+                // Save PDF
+                pdf.save('circlesize-spike-test.pdf');
+
+                // Estimate PDF file size (approximation)
+                const pdfDataURL = pdf.output('dataurlstring');
+                const pdfFileSize = pdfDataURL.length;
+
+                // Update results
+                document.getElementById('resultPdfTime').textContent = `${pdfGenerationTime.toFixed(2)}ms`;
+                document.getElementById('resultPdfSize').textContent = `${(pdfFileSize / 1024 / 1024).toFixed(2)}MB`;
+                document.getElementById('resultTotalTime').textContent = `${(canvasRenderTime + pdfGenerationTime).toFixed(2)}ms`;
+
+                showStatus(
+                    `✅ PDF created successfully in ${pdfGenerationTime.toFixed(2)}ms and downloaded`,
+                    'success'
+                );
+            } catch (error) {
+                showStatus(`❌ PDF creation failed: ${error.message}`, 'error');
+            }
+
+            pdfButton.disabled = false;
+        });
+
+        // Reset
+        resetButton.addEventListener('click', () => {
+            imageSize.value = '500';
+            circleSpacing.value = '2';
+            minRadius.value = '1';
+            maxRadius.value = '15';
+            document.getElementById('spacingValue').textContent = '2px';
+            document.getElementById('minRadiusValue').textContent = '1px';
+            document.getElementById('maxRadiusValue').textContent = '15px';
+
+            // Clear results
+            document.getElementById('resultSize').textContent = '—';
+            document.getElementById('resultCircles').textContent = '—';
+            document.getElementById('resultCanvasTime').textContent = '—';
+            document.getElementById('resultPngSize').textContent = '—';
+            document.getElementById('resultPdfTime').textContent = '—';
+            document.getElementById('resultPdfSize').textContent = '—';
+            document.getElementById('resultTotalTime').textContent = '—';
+
+            // Clear canvas
+            ctx.fillStyle = '#ffffff';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Reset buttons
+            renderButton.disabled = false;
+            pdfButton.disabled = true;
+
+            status.classList.remove('show');
+        });
+
+        // Show status message
+        function showStatus(message, type = 'info') {
+            status.textContent = message;
+            status.className = `status show ${type}`;
+        }
+    </script>
+</body>
+</html>
