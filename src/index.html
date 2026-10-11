@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="CircleSize - Convert images into stunning circle-based visualizations">
+    <title>CircleSize - Image to Circle Art</title>
+
+    <link rel="stylesheet" href="../css/styles.css">
+</head>
+<body>
+    <main class="app-container">
+        <!-- Header -->
+        <header class="app-header">
+            <h1>CircleSize</h1>
+            <p class="tagline">Convert images into stunning circle-based visualizations</p>
+        </header>
+
+        <div class="app-content">
+            <!-- Upload Section -->
+            <section class="section upload-section">
+                <h2>Step 1: Upload Image</h2>
+
+                <div class="file-input-wrapper">
+                    <input
+                        type="file"
+                        id="imageInput"
+                        accept="image/jpeg,image/png,image/webp,image/gif"
+                        aria-label="Upload image file"
+                        class="file-input"
+                    >
+                    <label for="imageInput" class="file-input-label">
+                        Choose Image or Drag & Drop
+                    </label>
+                </div>
+
+                <div id="uploadStatus" class="status-message" style="display: none;"></div>
+                <div id="imageMetadata" class="metadata" style="display: none;">
+                    <p><strong>Filename:</strong> <span id="metaFilename"></span></p>
+                    <p><strong>Dimensions:</strong> <span id="metaDimensions"></span></p>
+                    <p><strong>File Size:</strong> <span id="metaSize"></span></p>
+                </div>
+            </section>
+
+            <!-- Preview Section -->
+            <section class="section preview-section" id="previewSection" style="display: none;">
+                <h2>Step 2: Preview & Resize</h2>
+
+                <div class="preview-container">
+                    <div class="preview-image-wrapper">
+                        <h3>Grayscale Preview</h3>
+                        <canvas id="grayscaleCanvas" class="preview-canvas"></canvas>
+                    </div>
+                </div>
+
+                <!-- Resize Controls -->
+                <div class="controls-group">
+                    <div class="control-item">
+                        <label for="resizeSlider">Image Width:</label>
+                        <input
+                            type="range"
+                            id="resizeSlider"
+                            min="50"
+                            max="2000"
+                            step="10"
+                            class="slider"
+                        >
+                        <span id="resizeValue" class="control-value">500px</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Circle Configuration Section -->
+            <section class="section config-section" id="configSection" style="display: none;">
+                <h2>Step 3: Configure Circles</h2>
+
+                <div class="controls-grid">
+                    <div class="control-item">
+                        <label for="minRadiusSlider">Min Circle Radius:</label>
+                        <input
+                            type="range"
+                            id="minRadiusSlider"
+                            min="1"
+                            max="5"
+                            value="1"
+                            step="1"
+                            class="slider"
+                        >
+                        <span id="minRadiusValue" class="control-value">1px</span>
+                    </div>
+
+                    <div class="control-item">
+                        <label for="maxRadiusSlider">Max Circle Radius:</label>
+                        <input
+                            type="range"
+                            id="maxRadiusSlider"
+                            min="10"
+                            max="30"
+                            value="15"
+                            step="1"
+                            class="slider"
+                        >
+                        <span id="maxRadiusValue" class="control-value">15px</span>
+                    </div>
+
+                    <div class="control-item">
+                        <label for="strokeWidthSlider">Stroke Width:</label>
+                        <input
+                            type="range"
+                            id="strokeWidthSlider"
+                            min="1"
+                            max="3"
+                            value="2"
+                            step="0.5"
+                            class="slider"
+                        >
+                        <span id="strokeWidthValue" class="control-value">2px</span>
+                    </div>
+
+                    <div class="control-item">
+                        <label for="spacingSlider">Circle Spacing:</label>
+                        <input
+                            type="range"
+                            id="spacingSlider"
+                            min="0"
+                            max="5"
+                            value="0"
+                            step="1"
+                            class="slider"
+                        >
+                        <span id="spacingValue" class="control-value">0px</span>
+                    </div>
+                </div>
+
+                <button id="resetButton" class="button button-secondary">Reset to Defaults</button>
+            </section>
+
+            <!-- Circle Visualization Section -->
+            <section class="section visualization-section" id="visualizationSection" style="display: none;">
+                <h2>Step 4: Circle Visualization</h2>
+
+                <div class="visualization-container">
+                    <canvas id="circleCanvas" class="circle-canvas"></canvas>
+                </div>
+
+                <div id="processingStatus" class="status-message" style="display: none;">
+                    <span id="processingText">Processing...</span>
+                    <div class="progress-bar">
+                        <div id="progressFill" class="progress-fill"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Export Section -->
+            <section class="section export-section" id="exportSection" style="display: none;">
+                <h2>Step 5: Download PDF</h2>
+
+                <div class="export-options">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="includeMetadata" checked>
+                        Include metadata in PDF
+                    </label>
+                </div>
+
+                <button id="exportButton" class="button button-primary">
+                    Download as PDF
+                </button>
+
+                <div id="exportStatus" class="status-message" style="display: none;"></div>
+            </section>
+        </div>
+
+        <!-- Footer -->
+        <footer class="app-footer">
+            <p>CircleSize – Convert images into circle art</p>
+            <p><a href="https://github.com/RobertoReif/calmadots-circles" target="_blank">View on GitHub</a></p>
+        </footer>
+    </main>
+
+    <!-- Scripts -->
+    <script src="../js/imageProcessor.js"></script>
+    <script src="../js/canvas.js"></script>
+    <script src="../js/pdfExporter.js"></script>
+    <script src="../js/app.js"></script>
+</body>
+</html>

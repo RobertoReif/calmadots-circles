@@ -1,0 +1,33 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Node (if we ever add build tools)
+node_modules/
+package-lock.json
+npm-debug.log
+
+# Dependencies (if manually downloaded)
+/lib/
+
+# Build artifacts (if we add build process)
+/dist/
+/build/
+
+# Local environment files
+.env
+.env.local
+
+# Temporary files
+*.tmp
+*.log
+
+# Claude Code
+.claude/
