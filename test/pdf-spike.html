@@ -4,18 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CircleSize - PDF Export Technical Spike</title>
-    <!-- Load jsPDF locally -->
-    <script src="../js/jspdf.umd.min.js"></script>
-    <script>
-        // Check if jsPDF loaded successfully
-        window.addEventListener('load', () => {
-            if (typeof window.jsPDF === 'undefined' && typeof jsPDF === 'undefined') {
-                console.warn('jsPDF failed to load');
-            } else {
-                console.log('jsPDF loaded successfully');
-            }
-        });
-    </script>
+    <!-- Load simple PDF generator -->
+    <script src="../js/simplePdfGenerator.js"></script>
     <style>
         * {
             margin: 0;
@@ -542,85 +532,22 @@ circle_radius = min_radius + (normalized_darkness * (max_radius - min_radius))
             const t1 = performance.now();
 
             try {
-                // Get canvas as PNG
-                const imageDataURL = canvas.toDataURL('image/png');
-
-                // Create PDF - handle different jsPDF load methods
-                let pdf;
-                console.log('Checking jsPDF availability...');
-                console.log('typeof jsPDF:', typeof jsPDF);
-                console.log('typeof window.jsPDF:', typeof window.jsPDF);
-                console.log('window.jsPDF.jsPDF:', typeof window.jsPDF?.jsPDF);
-
-                let JsPDFLib = null;
-                if (typeof jsPDF !== 'undefined') {
-                    JsPDFLib = jsPDF;
-                    console.log('Found jsPDF as global');
-                } else if (typeof window.jsPDF !== 'undefined') {
-                    // Check if jsPDF is nested under window.jsPDF.jsPDF (UMD module)
-                    if (typeof window.jsPDF.jsPDF !== 'undefined') {
-                        JsPDFLib = window.jsPDF.jsPDF;
-                        console.log('Found jsPDF as window.jsPDF.jsPDF');
-                    } else {
-                        JsPDFLib = window.jsPDF;
-                        console.log('Found jsPDF as window.jsPDF');
-                    }
-                } else {
-                    throw new Error('jsPDF library failed to load. Please refresh the page.');
-                }
-
-                pdf = new JsPDFLib('p', 'mm', 'a4');
-                const pdfWidth = 210; // A4 width in mm
-                const aspectRatio = canvas.height / canvas.width;
-                let pdfHeight = pdfWidth * aspectRatio;
-
-                // Limit height to A4 max
-                const maxPdfHeight = 297;
-                if (pdfHeight > maxPdfHeight) {
-                    pdfHeight = maxPdfHeight;
-                }
-
-                // Add title
-                pdf.setFontSize(16);
-                pdf.text('CircleSize - Technical Spike Test', 105, 15, { align: 'center' });
-
-                // Add metadata
-                pdf.setFontSize(10);
-                pdf.setTextColor(102, 102, 102);
-                let metaY = 25;
-                pdf.text(`Canvas Size: ${canvas.width}×${canvas.height}px`, 10, metaY);
-                metaY += 4;
-                pdf.text(`Render Time: ${canvasRenderTime.toFixed(2)}ms`, 10, metaY);
-                metaY += 4;
-                pdf.text(`Generated: ${new Date().toLocaleString()}`, 10, metaY);
-
-                // Add image to PDF
-                pdf.setTextColor(0, 0, 0);
-                const imageY = 45;
-                const imageWidth = pdfWidth - 20; // 10mm margins
-                const imageHeight = (imageWidth * canvas.height) / canvas.width;
-
-                pdf.addImage(imageDataURL, 'PNG', 10, imageY, imageWidth, imageHeight);
-
-                // Add footer
-                pdf.setFontSize(8);
-                pdf.setTextColor(153, 153, 153);
-                pdf.text(
-                    'CircleSize PDF Export - Technical Spike Test',
-                    105,
-                    maxPdfHeight - 5,
-                    { align: 'center' }
-                );
+                // Create PDF using SimplePdfGenerator
+                const pdfBlob = SimplePdfGenerator.canvasToPdf(canvas, 'circlesize-spike-test.pdf', {
+                    canvasWidth: canvas.width,
+                    canvasHeight: canvas.height,
+                    renderTime: canvasRenderTime.toFixed(2),
+                    timestamp: new Date().toLocaleString()
+                });
 
                 const t2 = performance.now();
                 pdfGenerationTime = t2 - t1;
 
-                // Save PDF
-                pdf.save('circlesize-spike-test.pdf');
+                // Download PDF
+                SimplePdfGenerator.downloadPdf(pdfBlob, 'circlesize-spike-test.pdf');
 
-                // Estimate PDF file size (approximation)
-                const pdfDataURL = pdf.output('dataurlstring');
-                const pdfFileSize = pdfDataURL.length;
+                // Estimate PDF file size
+                const pdfFileSize = pdfBlob.size;
 
                 // Update results
                 document.getElementById('resultPdfTime').textContent = `${pdfGenerationTime.toFixed(2)}ms`;
