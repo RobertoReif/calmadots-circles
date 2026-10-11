@@ -4,9 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CircleSize - PDF Export Technical Spike</title>
-    <!-- Load jsPDF and dependencies -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-    <script src="https://unpkg.com/jspdf@latest/dist/jspdf.umd.min.js"></script>
+    <!-- Load jsPDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -538,15 +537,29 @@ circle_radius = min_radius + (normalized_darkness * (max_radius - min_radius))
 
                 // Create PDF - handle different jsPDF load methods
                 let pdf;
+                console.log('Checking jsPDF availability...');
+                console.log('typeof jsPDF:', typeof jsPDF);
+                console.log('typeof window.jsPDF:', typeof window.jsPDF);
+                console.log('window.jsPDF.jsPDF:', typeof window.jsPDF?.jsPDF);
+
+                let JsPDFLib = null;
                 if (typeof jsPDF !== 'undefined') {
-                    // Direct jsPDF object
-                    pdf = new jsPDF('p', 'mm', 'a4');
+                    JsPDFLib = jsPDF;
+                    console.log('Found jsPDF as global');
                 } else if (typeof window.jsPDF !== 'undefined') {
-                    // jsPDF as window property
-                    pdf = new window.jsPDF('p', 'mm', 'a4');
+                    // Check if jsPDF is nested under window.jsPDF.jsPDF (UMD module)
+                    if (typeof window.jsPDF.jsPDF !== 'undefined') {
+                        JsPDFLib = window.jsPDF.jsPDF;
+                        console.log('Found jsPDF as window.jsPDF.jsPDF');
+                    } else {
+                        JsPDFLib = window.jsPDF;
+                        console.log('Found jsPDF as window.jsPDF');
+                    }
                 } else {
                     throw new Error('jsPDF library failed to load. Please refresh the page.');
                 }
+
+                pdf = new JsPDFLib('p', 'mm', 'a4');
                 const pdfWidth = 210; // A4 width in mm
                 const aspectRatio = canvas.height / canvas.width;
                 let pdfHeight = pdfWidth * aspectRatio;
