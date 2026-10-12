@@ -11,6 +11,7 @@ class CircleSizeApp {
 
         this.currentFilename = 'image';
         this.isProcessing = false;
+        this.resizeTimeout = null; // For debouncing resize events
 
         this.initializeElements();
         this.attachEventListeners();
@@ -185,14 +186,34 @@ class CircleSizeApp {
     }
 
     /**
-     * Handle resize slider change
+     * Handle resize slider change with debouncing
      */
-    async handleResize(event) {
+    handleResize(event) {
         const newWidth = parseInt(event.target.value, 10);
+
+        // Update display value immediately (for UX feedback)
         this.resizeValue.textContent = `${newWidth}px`;
 
+        // Debounce the actual resize to avoid excessive re-renders
+        clearTimeout(this.resizeTimeout);
+
+        this.resizeTimeout = setTimeout(() => {
+            this.performResize(newWidth);
+        }, 300); // Wait 300ms after user stops dragging
+    }
+
+    /**
+     * Perform the actual image resize
+     */
+    async performResize(newWidth) {
         try {
             await this.imageProcessor.resizeImage(newWidth);
+
+            // Update metadata display with new dimensions
+            const dims = this.imageProcessor.getDimensions();
+            this.metaDimensions.textContent = `${dims.width} × ${dims.height} px`;
+
+            // Update preview and visualization
             this.imageProcessor.drawGrayscalePreview(this.grayscaleCanvas);
             await this.renderCircles();
         } catch (error) {
