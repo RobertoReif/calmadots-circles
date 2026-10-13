@@ -95,9 +95,9 @@ class SimplePdfGenerator {
         }
 
         // Center image on page with equal margins on all sides
+        // Both x and y position the bottom-left corner of the image
         const x = margin + ((maxWidth - displayWidth) / 2);
-        // PDF coordinates have origin at bottom-left, so flip the y-coordinate
-        const y = pageHeight - margin - displayHeight - ((maxHeight - displayHeight) / 2);
+        const y = margin + ((maxHeight - displayHeight) / 2);
 
         // PDF content stream
         const content = [
