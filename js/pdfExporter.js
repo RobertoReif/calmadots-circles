@@ -128,8 +128,12 @@ class PDFExporter {
             // Convert cropped canvas to image data (no padding)
             const imgData = croppedCanvas.toDataURL('image/png');
 
+            console.log('About to add image with:', { x, y, imgWidth, imgHeight, pageWidth, pageHeight, margin });
+
             // Add image to PDF
             pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
+
+            console.log('Image added to PDF');
 
             // Add metadata if requested (positioned below image with proper spacing)
             if (finalOptions.includeMetadata && imageMetadata) {
