@@ -420,26 +420,19 @@ class CircleSizeApp {
     initializeSelectionCanvas() {
         if (!this.selectionCanvas) return;
 
-        // Get the displayed size of the grayscale canvas (accounting for CSS scaling)
-        const rect = this.grayscaleCanvas.getBoundingClientRect();
-        const displayWidth = Math.round(rect.width);
-        const displayHeight = Math.round(rect.height);
-
-        // Set selection canvas internal dimensions to match grayscale canvas (for rendering)
+        // Set selection canvas internal dimensions to match grayscale canvas
+        // This ensures drawing coordinates are correct
         this.selectionCanvas.width = this.grayscaleCanvas.width;
         this.selectionCanvas.height = this.grayscaleCanvas.height;
 
-        // Set CSS display size to match the displayed size
-        this.selectionCanvas.style.width = displayWidth + 'px';
-        this.selectionCanvas.style.height = displayHeight + 'px';
+        // Do NOT set CSS width/height - let CSS handle responsive scaling
+        // The canvas will scale via max-width: 100% like the preview canvas
 
         // Clear any previous selection
         this.cropSelection = null;
 
         console.log('[app.initializeSelectionCanvas] Selection canvas initialized:', {
-            canvasInternalDims: `${this.selectionCanvas.width}x${this.selectionCanvas.height}`,
-            displayDims: `${displayWidth}x${displayHeight}`,
-            cssSize: `${this.selectionCanvas.style.width}x${this.selectionCanvas.style.height}`
+            internalDims: `${this.selectionCanvas.width}x${this.selectionCanvas.height}`
         });
     }
 

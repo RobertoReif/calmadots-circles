@@ -285,17 +285,19 @@ a:hover {
 
 .canvas-wrapper {
     position: relative;
-    display: inline-block;
+    display: block;
     width: 100%;
+    max-width: 100%;
 }
 
 .preview-canvas {
     max-width: 100%;
+    width: 100%;
+    height: auto;
     border: 1px solid var(--color-border);
     background-color: #f9f9f9;
     border-radius: 4px;
     display: block;
-    height: auto;
 }
 
 .selection-canvas {
@@ -304,6 +306,9 @@ a:hover {
     left: 0;
     cursor: crosshair;
     border-radius: 4px;
+    max-width: 100%;
+    height: auto;
+    display: block;
 }
 
 .circle-canvas {
