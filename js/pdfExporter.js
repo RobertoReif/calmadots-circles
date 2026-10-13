@@ -70,7 +70,7 @@ class PDFExporter {
             // Get page dimensions
             const pageWidth = pdf.internal.pageSize.getWidth();
             const pageHeight = pdf.internal.pageSize.getHeight();
-            const margin = 2.54; // 0.1 inch margin on all sides (2.54mm = 0.1 inch)
+            const margin = 12.7; // 0.5 inch margin on all sides (12.7mm = 0.5 inch)
 
             // Canvas has padding added during rendering to prevent circle clipping
             // We need to crop this padding out to get the actual circle artwork
