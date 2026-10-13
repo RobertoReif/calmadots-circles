@@ -94,9 +94,9 @@ class SimplePdfGenerator {
             displayHeight *= scale;
         }
 
-        // Position with equal margins on all sides
-        const x = margin;
-        const y = margin;
+        // Center image on page with equal margins on all sides
+        const x = margin + ((maxWidth - displayWidth) / 2);
+        const y = margin + ((maxHeight - displayHeight) / 2);
 
         // PDF content stream
         const content = [
