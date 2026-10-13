@@ -11,6 +11,7 @@ class CircleVisualizer {
             strokeWidth: 2,
             spacing: 0,
         };
+        this.lastRenderPadding = 0; // Store padding from last render
     }
 
     /**
@@ -69,6 +70,9 @@ class CircleVisualizer {
         // Use a generous safety margin to ensure ALL circles fit completely
         const maxCircleExtent = (this.config.maxRadius + this.config.strokeWidth) * autoScale;
         const paddingPixels = Math.ceil(maxCircleExtent) + 50; // 50px extra safety margin
+
+        // Store padding for later use when cropping canvas for display
+        this.lastRenderPadding = paddingPixels;
 
         console.log('[renderCircles] Starting render:', {
             originalDimensions: `${width}x${height}`,
@@ -187,6 +191,36 @@ class CircleVisualizer {
             console.log('[renderCircles] Starting chunked rendering with CHUNK_HEIGHT=50');
             requestAnimationFrame(renderChunk);
         });
+    }
+
+    /**
+     * Get canvas cropped to remove the padding added for edge protection
+     * @param {HTMLCanvasElement} canvas - Canvas element
+     * @returns {HTMLCanvasElement} Cropped canvas without padding
+     */
+    getCroppedCanvas(canvas) {
+        if (this.lastRenderPadding === 0) {
+            return canvas; // No padding to remove
+        }
+
+        const padding = this.lastRenderPadding;
+        const croppedWidth = canvas.width - (padding * 2);
+        const croppedHeight = canvas.height - (padding * 2);
+
+        const croppedCanvas = document.createElement('canvas');
+        croppedCanvas.width = croppedWidth;
+        croppedCanvas.height = croppedHeight;
+
+        const ctx = croppedCanvas.getContext('2d');
+        ctx.drawImage(
+            canvas,
+            padding, padding, // Source position (top-left of content)
+            croppedWidth, croppedHeight, // Source size
+            0, 0, // Destination position
+            croppedWidth, croppedHeight // Destination size
+        );
+
+        return croppedCanvas;
     }
 
     /**
