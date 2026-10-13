@@ -21,6 +21,9 @@ class CircleSizeApp {
      * Initialize DOM elements
      */
     initializeElements() {
+        // Debug element
+        this.canvasDebug = document.getElementById('canvasDebug');
+
         // File input
         this.imageInput = document.getElementById('imageInput');
         this.fileInputLabel = document.querySelector('.file-input-label');
@@ -208,6 +211,7 @@ class CircleSizeApp {
      */
     handleSelectionStart(event) {
         const rect = this.selectionCanvas.getBoundingClientRect();
+        // Since internal dimensions match displayed size, no scaling needed
         const x = event.clientX - rect.left;
         const y = event.clientY - rect.top;
 
@@ -228,6 +232,7 @@ class CircleSizeApp {
         if (!this.cropSelection || !this.cropSelection.isSelecting) return;
 
         const rect = this.selectionCanvas.getBoundingClientRect();
+        // Since internal dimensions match displayed size, no scaling needed
         let endX = event.clientX - rect.left;
         let endY = event.clientY - rect.top;
 
@@ -292,7 +297,7 @@ class CircleSizeApp {
         // Clear canvas
         ctx.clearRect(0, 0, this.selectionCanvas.width, this.selectionCanvas.height);
 
-        // Get normalized coordinates
+        // Get normalized coordinates (in internal canvas dimensions)
         const startX = Math.min(this.cropSelection.startX, this.cropSelection.endX);
         const startY = Math.min(this.cropSelection.startY, this.cropSelection.endY);
         const endX = Math.max(this.cropSelection.startX, this.cropSelection.endX);
@@ -333,15 +338,20 @@ class CircleSizeApp {
         this.showMessage(this.cropStatus, `Cropping to ${orientation}...`, 'info');
 
         try {
-            // Get normalized selection coordinates (in canvas display pixels)
+            // Get normalized selection coordinates (in selection canvas coordinates)
             const startX = Math.min(this.cropSelection.startX, this.cropSelection.endX);
             const startY = Math.min(this.cropSelection.startY, this.cropSelection.endY);
             const endX = Math.max(this.cropSelection.startX, this.cropSelection.endX);
             const endY = Math.max(this.cropSelection.startY, this.cropSelection.endY);
 
-            // Scale selection from canvas display coordinates to image pixel coordinates
-            const scaleX = this.imageProcessor.currentWidth / this.selectionCanvas.width;
-            const scaleY = this.imageProcessor.currentHeight / this.selectionCanvas.height;
+            // Get grayscale canvas displayed size
+            const grayscaleRect = this.grayscaleCanvas.getBoundingClientRect();
+            const displayWidth = Math.round(grayscaleRect.width);
+            const displayHeight = Math.round(grayscaleRect.height);
+
+            // Scale from selection canvas (display size) to image processor coordinates
+            const scaleX = this.imageProcessor.currentWidth / displayWidth;
+            const scaleY = this.imageProcessor.currentHeight / displayHeight;
 
             const customCropArea = {
                 x: Math.round(startX * scaleX),
@@ -349,6 +359,8 @@ class CircleSizeApp {
                 width: Math.round((endX - startX) * scaleX),
                 height: Math.round((endY - startY) * scaleY)
             };
+
+            console.log('[app.handleCrop] Crop area:', customCropArea, 'Image dims:', this.imageProcessor.currentWidth, 'x', this.imageProcessor.currentHeight);
 
             // Perform the crop with the selected region
             this.imageProcessor.cropAndRescale(orientation, customCropArea).then(async (result) => {
@@ -413,17 +425,32 @@ class CircleSizeApp {
     initializeSelectionCanvas() {
         if (!this.selectionCanvas) return;
 
-        // Match selection canvas size to grayscale canvas
-        this.selectionCanvas.width = this.grayscaleCanvas.width;
-        this.selectionCanvas.height = this.grayscaleCanvas.height;
+        // Get actual displayed dimensions using getBoundingClientRect
+        const grayscaleRect = this.grayscaleCanvas.getBoundingClientRect();
+        const displayWidth = Math.round(grayscaleRect.width);
+        const displayHeight = Math.round(grayscaleRect.height);
+
+        // Set selection canvas INTERNAL dimensions to match the DISPLAYED size
+        // This is the key: canvas.width/height must match how big it actually appears on screen
+        this.selectionCanvas.width = displayWidth;
+        this.selectionCanvas.height = displayHeight;
+
+        // Set CSS to explicitly match the displayed size
+        this.selectionCanvas.style.width = displayWidth + 'px';
+        this.selectionCanvas.style.height = displayHeight + 'px';
 
         // Clear any previous selection
         this.cropSelection = null;
 
-        console.log('[app.initializeSelectionCanvas] Selection canvas initialized:', {
-            width: this.selectionCanvas.width,
-            height: this.selectionCanvas.height
+        console.log('[app.initializeSelectionCanvas] Detailed Debug:', {
+            grayscaleCanvasInternal: `${this.grayscaleCanvas.width}x${this.grayscaleCanvas.height}`,
+            grayscaleDisplaySize: `${displayWidth}x${displayHeight}`,
+            selectionCanvasInternal: `${this.selectionCanvas.width}x${this.selectionCanvas.height}`,
+            selectionCanvasCSSStyle: `${this.selectionCanvas.style.width} x ${this.selectionCanvas.style.height}`
         });
+
+        // Show debug info on page
+        this.showCanvasDebug();
     }
 
 
@@ -496,6 +523,16 @@ class CircleSizeApp {
                 this.fillCircles
             );
             console.log('[app.renderCircles] Visualization rendering complete');
+
+            // Create a cropped version of the canvas without padding for display in Step 4
+            const croppedCanvas = this.visualizer.getCroppedCanvas(this.circleCanvas);
+            const displayCanvas = this.circleCanvas.parentElement;
+
+            // Copy the cropped canvas dimensions and content to the display canvas
+            this.circleCanvas.width = croppedCanvas.width;
+            this.circleCanvas.height = croppedCanvas.height;
+            const ctx = this.circleCanvas.getContext('2d');
+            ctx.drawImage(croppedCanvas, 0, 0);
 
             this.processingStatus.style.display = 'none';
         } catch (error) {
@@ -579,6 +616,35 @@ class CircleSizeApp {
         } finally {
             this.exportButton.disabled = false;
         }
+    }
+
+    /**
+     * Show canvas dimensions debug info
+     */
+    showCanvasDebug() {
+        if (!this.canvasDebug) return;
+
+        const grayscaleRect = this.grayscaleCanvas.getBoundingClientRect();
+        const selectionRect = this.selectionCanvas.getBoundingClientRect();
+
+        const debugInfo = `
+<strong>Grayscale Canvas:</strong><br>
+Internal: ${this.grayscaleCanvas.width}×${this.grayscaleCanvas.height}px<br>
+Display: ${Math.round(grayscaleRect.width)}×${Math.round(grayscaleRect.height)}px<br>
+CSS: ${getComputedStyle(this.grayscaleCanvas).width} × ${getComputedStyle(this.grayscaleCanvas).height}<br>
+<br>
+<strong>Selection Canvas:</strong><br>
+Internal: ${this.selectionCanvas.width}×${this.selectionCanvas.height}px<br>
+Display: ${Math.round(selectionRect.width)}×${Math.round(selectionRect.height)}px<br>
+CSS: ${getComputedStyle(this.selectionCanvas).width} × ${getComputedStyle(this.selectionCanvas).height}<br>
+<br>
+<strong>Match Status:</strong><br>
+Display sizes match: ${Math.round(grayscaleRect.width) === Math.round(selectionRect.width) && Math.round(grayscaleRect.height) === Math.round(selectionRect.height) ? '✓ YES' : '✗ NO'}<br>
+Internal match display: ${this.selectionCanvas.width === Math.round(grayscaleRect.width) && this.selectionCanvas.height === Math.round(grayscaleRect.height) ? '✓ YES' : '✗ NO'}
+        `;
+
+        this.canvasDebug.innerHTML = debugInfo;
+        this.canvasDebug.style.display = 'block';
     }
 
     /**

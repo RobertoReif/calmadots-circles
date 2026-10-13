@@ -12,8 +12,20 @@ class SimplePdfGenerator {
      * @returns {Blob} PDF file as Blob
      */
     static canvasToPdf(canvas, filename = 'document.pdf', metadata = {}) {
-        // Get canvas as JPEG data URL (better for PDF embedding than PNG)
-        const imageData = canvas.toDataURL('image/jpeg', 0.95);
+        // Create a new canvas with white background to ensure proper image
+        const exportCanvas = document.createElement('canvas');
+        exportCanvas.width = canvas.width;
+        exportCanvas.height = canvas.height;
+
+        const exportCtx = exportCanvas.getContext('2d');
+        // Draw white background
+        exportCtx.fillStyle = '#ffffff';
+        exportCtx.fillRect(0, 0, exportCanvas.width, exportCanvas.height);
+        // Draw the actual canvas on top
+        exportCtx.drawImage(canvas, 0, 0);
+
+        // Get canvas as PNG data URL
+        const imageData = exportCanvas.toDataURL('image/png');
 
         // Extract base64 data
         const base64Data = imageData.split(',')[1];
@@ -21,7 +33,7 @@ class SimplePdfGenerator {
         // Create simple PDF structure
         const pdf = new SimplePdfGenerator();
         pdf.addMetadata(metadata);
-        pdf.addImage(base64Data, canvas.width, canvas.height);
+        pdf.addImage(base64Data, exportCanvas.width, exportCanvas.height, 'png');
 
         return pdf.generate();
     }
@@ -43,12 +55,13 @@ class SimplePdfGenerator {
     /**
      * Add base64 image to PDF
      */
-    addImage(base64Data, width, height) {
+    addImage(base64Data, width, height, format = 'png') {
         const imageIndex = this.images.length;
         this.images.push({
             data: base64Data,
             width: width,
-            height: height
+            height: height,
+            format: format
         });
 
         // Create page with image
@@ -81,9 +94,9 @@ class SimplePdfGenerator {
             displayHeight *= scale;
         }
 
-        // Center on page
-        const x = (pageWidth - displayWidth) / 2;
-        const y = pageHeight - margin - displayHeight;
+        // Position with equal margins on all sides
+        const x = margin;
+        const y = margin;
 
         // PDF content stream
         const content = [
