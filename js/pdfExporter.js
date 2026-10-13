@@ -6,7 +6,13 @@
 
 class PDFExporter {
     constructor() {
-        this.pdfLibraryLoaded = typeof jsPDF !== 'undefined';
+        // jsPDF UMD bundle exposes as window.jspdf.jsPDF (lowercase jspdf namespace)
+        this.jsPDFLib = (window.jspdf && window.jspdf.jsPDF) || window.jsPDF || null;
+        this.pdfLibraryLoaded = this.jsPDFLib !== null && typeof this.jsPDFLib !== 'undefined';
+
+        if (!this.pdfLibraryLoaded) {
+            console.warn('[PDFExporter] jsPDF library not found. Check that jspdf.umd.min.js is loaded before pdfExporter.js');
+        }
     }
 
     /**
@@ -54,7 +60,7 @@ class PDFExporter {
             const pageOrientation = canvasRatio > 1 ? 'l' : 'p'; // landscape or portrait
 
             // Create PDF with appropriate page size
-            const pdf = new jsPDF({
+            const pdf = new this.jsPDFLib({
                 orientation: pageOrientation,
                 unit: 'mm',
                 format: 'a4'
