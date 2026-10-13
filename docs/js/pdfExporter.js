@@ -69,7 +69,7 @@ class PDFExporter {
             // Get page dimensions
             const pageWidth = pdf.internal.pageSize.getWidth();
             const pageHeight = pdf.internal.pageSize.getHeight();
-            const margin = 25.4; // 1 inch margin on all sides (25.4mm = 1 inch)
+            const margin = 2.54; // 0.1 inch margin on all sides (2.54mm = 0.1 inch)
 
             // Canvas has padding from renderCircles() - use it directly
             const canvasWidth = canvas.width;
