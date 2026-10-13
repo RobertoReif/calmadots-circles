@@ -64,9 +64,11 @@ class CircleVisualizer {
         const scaledWidth = width * autoScale;
         const scaledHeight = height * autoScale;
 
-        // Add padding to canvas to prevent circles at edges from being clipped
-        // Use maxRadius as minimum padding to accommodate full circle extents
-        const paddingPixels = Math.ceil(this.config.maxRadius * autoScale) + 10;
+        // Add substantial padding to canvas to prevent circles at edges from being clipped
+        // Account for both radius and stroke width which extends beyond the radius
+        // Use a generous safety margin to ensure ALL circles fit completely
+        const maxCircleExtent = (this.config.maxRadius + this.config.strokeWidth) * autoScale;
+        const paddingPixels = Math.ceil(maxCircleExtent) + 50; // 50px extra safety margin
 
         console.log('[renderCircles] Starting render:', {
             originalDimensions: `${width}x${height}`,

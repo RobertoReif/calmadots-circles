@@ -71,25 +71,30 @@ class PDFExporter {
             const pageHeight = pdf.internal.pageSize.getHeight();
             const margin = 12; // Equal margin on all sides
 
-            // Canvas already has padding built in from renderCircles()
-            // Calculate max dimensions for image on page (with equal margins)
+            // Canvas has padding from renderCircles() - use it directly
+            const canvasWidth = canvas.width;
+            const canvasHeight = canvas.height;
+
+            // Calculate max available space on page with equal margins
             const maxWidth = pageWidth - (margin * 2);
             const maxHeight = pageHeight - (margin * 2);
 
             // Calculate scaling to fit on page while preserving aspect ratio
+            // The canvas already has all the padding it needs
             let imgWidth = maxWidth;
-            let imgHeight = (canvas.height / canvas.width) * imgWidth;
+            let imgHeight = (canvasHeight / canvasWidth) * imgWidth;
 
             if (imgHeight > maxHeight) {
                 imgHeight = maxHeight;
-                imgWidth = (canvas.width / canvas.height) * imgHeight;
+                imgWidth = (canvasWidth / canvasHeight) * imgHeight;
             }
 
-            // Center image on page with equal margins on all sides
-            const x = (pageWidth - imgWidth) / 2;
-            const y = (pageHeight - imgHeight) / 2;
+            // Center image perfectly on page with equal margins on all 4 sides
+            // This centers the entire canvas (including its padding) on the page
+            const x = margin + ((maxWidth - imgWidth) / 2);
+            const y = margin + ((maxHeight - imgHeight) / 2);
 
-            // Convert canvas to image data (already has padding from rendering)
+            // Convert canvas to image data
             const imgData = canvas.toDataURL('image/png');
 
             // Add image to PDF
