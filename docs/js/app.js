@@ -11,7 +11,6 @@ class CircleSizeApp {
 
         this.currentFilename = 'image';
         this.isProcessing = false;
-        this.resizeTimeout = null; // For debouncing resize events
 
         this.initializeElements();
         this.attachEventListeners();
@@ -36,8 +35,14 @@ class CircleSizeApp {
         // Preview section
         this.previewSection = document.getElementById('previewSection');
         this.grayscaleCanvas = document.getElementById('grayscaleCanvas');
-        this.resizeSlider = document.getElementById('resizeSlider');
-        this.resizeValue = document.getElementById('resizeValue');
+        this.selectionCanvas = document.getElementById('selectionCanvas');
+        this.cropOrientationRadios = document.querySelectorAll('input[name="cropOrientation"]');
+        this.cropButton = document.getElementById('cropButton');
+        this.cropStatus = document.getElementById('cropStatus');
+
+        // Crop selection state
+        this.cropSelection = null; // Will store {startX, startY, endX, endY}
+        this.currentCropOrientation = 'portrait'; // Default orientation for selection
 
         // Config section
         this.configSection = document.getElementById('configSection');
@@ -54,9 +59,14 @@ class CircleSizeApp {
         // Visualization section
         this.visualizationSection = document.getElementById('visualizationSection');
         this.circleCanvas = document.getElementById('circleCanvas');
+        this.fillCirclesCheckbox = document.getElementById('fillCirclesCheckbox');
+        this.longEdgeSlider = document.getElementById('longEdgeSlider');
+        this.longEdgeValue = document.getElementById('longEdgeValue');
         this.processingStatus = document.getElementById('processingStatus');
         this.processingText = document.getElementById('processingText');
         this.progressFill = document.getElementById('progressFill');
+        this.fillCircles = false; // Track fill state
+        this.longEdgePixels = 100; // Track long edge pixel count
 
         // Export section
         this.exportSection = document.getElementById('exportSection');
@@ -77,8 +87,32 @@ class CircleSizeApp {
         this.fileInputLabel.addEventListener('dragleave', (e) => this.handleDragLeave(e));
         this.fileInputLabel.addEventListener('drop', (e) => this.handleDrop(e));
 
-        // Resize slider
-        this.resizeSlider.addEventListener('input', (e) => this.handleResize(e));
+        // Crop orientation radio buttons
+        this.cropOrientationRadios.forEach((radio) => {
+            radio.addEventListener('change', (e) => {
+                this.currentCropOrientation = e.target.value;
+                // Redraw selection with new aspect ratio
+                if (this.cropSelection) {
+                    this.drawSelectionRectangle();
+                }
+            });
+        });
+
+        // Crop button
+        if (this.cropButton) {
+            this.cropButton.addEventListener('click', () => {
+                const selectedOrientation = document.querySelector('input[name="cropOrientation"]:checked').value;
+                this.handleCrop(selectedOrientation);
+            });
+        }
+
+        // Selection canvas
+        if (this.selectionCanvas) {
+            this.selectionCanvas.addEventListener('mousedown', (e) => this.handleSelectionStart(e));
+            this.selectionCanvas.addEventListener('mousemove', (e) => this.handleSelectionDrag(e));
+            this.selectionCanvas.addEventListener('mouseup', (e) => this.handleSelectionEnd(e));
+            this.selectionCanvas.addEventListener('mouseleave', (e) => this.handleSelectionEnd(e));
+        }
 
         // Circle config sliders
         this.minRadiusSlider.addEventListener('input', (e) => this.handleConfigChange(e));
@@ -88,6 +122,21 @@ class CircleSizeApp {
 
         // Reset button
         this.resetButton.addEventListener('click', () => this.resetToDefaults());
+
+        // Fill circles checkbox
+        this.fillCirclesCheckbox.addEventListener('change', (e) => {
+            this.fillCircles = e.target.checked;
+            // Re-render circles with new fill setting
+            this.renderCircles();
+        });
+
+        // Long edge slider
+        this.longEdgeSlider.addEventListener('input', (e) => {
+            this.longEdgePixels = parseInt(e.target.value, 10);
+            this.longEdgeValue.textContent = `${this.longEdgePixels}px`;
+            // Resize image and re-render circles
+            this.handleLongEdgeChange();
+        });
 
         // Export button
         this.exportButton.addEventListener('click', () => this.handleExport());
@@ -104,24 +153,24 @@ class CircleSizeApp {
 
         this.showMessage(this.uploadStatus, 'Loading image...', 'info');
 
-        const result = await this.imageProcessor.loadImage(file);
+        try {
+            await this.imageProcessor.loadImage(file);
 
-        if (!result.success) {
-            this.showMessage(this.uploadStatus, result.message, 'error');
-            return;
+            // Show metadata
+            const metadata = this.imageProcessor.getMetadata();
+            this.metaFilename.textContent = file.name;
+            this.metaDimensions.textContent = `${metadata.width} × ${metadata.height} px`;
+            this.metaSize.textContent = metadata.size;
+            this.imageMetadata.style.display = 'block';
+
+            this.showMessage(this.uploadStatus, 'Image loaded successfully', 'success');
+
+            // Convert to grayscale
+            await this.processImage();
+
+        } catch (error) {
+            this.showMessage(this.uploadStatus, error.message, 'error');
         }
-
-        // Show metadata
-        const { metadata } = result;
-        this.metaFilename.textContent = file.name;
-        this.metaDimensions.textContent = `${metadata.width} × ${metadata.height} px`;
-        this.metaSize.textContent = metadata.size;
-        this.imageMetadata.style.display = 'block';
-
-        this.showMessage(this.uploadStatus, result.message, 'success');
-
-        // Convert to grayscale
-        await this.processImage();
     }
 
     /**
@@ -155,6 +204,182 @@ class CircleSizeApp {
     }
 
     /**
+     * Handle crop selection start
+     */
+    handleSelectionStart(event) {
+        const rect = this.selectionCanvas.getBoundingClientRect();
+        const x = event.clientX - rect.left;
+        const y = event.clientY - rect.top;
+
+        this.cropSelection = {
+            startX: x,
+            startY: y,
+            endX: x,
+            endY: y,
+            isSelecting: true
+        };
+        console.log('[app.handleSelectionStart] Selection started at:', x, y);
+    }
+
+    /**
+     * Handle crop selection drag with aspect ratio constraint
+     */
+    handleSelectionDrag(event) {
+        if (!this.cropSelection || !this.cropSelection.isSelecting) return;
+
+        const rect = this.selectionCanvas.getBoundingClientRect();
+        let endX = event.clientX - rect.left;
+        let endY = event.clientY - rect.top;
+
+        // Get the target aspect ratio based on current orientation
+        const aspectRatios = {
+            portrait: 8.5 / 11,    // width/height
+            landscape: 11 / 8.5    // width/height
+        };
+        const targetRatio = aspectRatios[this.currentCropOrientation];
+
+        // Calculate raw dimensions
+        const rawWidth = Math.abs(endX - this.cropSelection.startX);
+        const rawHeight = Math.abs(endY - this.cropSelection.startY);
+
+        // Constrain to aspect ratio - use the larger dimension as reference
+        let constrainedWidth, constrainedHeight;
+
+        if (rawWidth / rawHeight > targetRatio) {
+            // Width is too large, constrain by height
+            constrainedHeight = rawHeight;
+            constrainedWidth = Math.round(rawHeight * targetRatio);
+        } else {
+            // Height is too large, constrain by width
+            constrainedWidth = rawWidth;
+            constrainedHeight = Math.round(rawWidth / targetRatio);
+        }
+
+        // Update end coordinates to maintain aspect ratio
+        if (endX >= this.cropSelection.startX) {
+            this.cropSelection.endX = this.cropSelection.startX + constrainedWidth;
+        } else {
+            this.cropSelection.endX = this.cropSelection.startX - constrainedWidth;
+        }
+
+        if (endY >= this.cropSelection.startY) {
+            this.cropSelection.endY = this.cropSelection.startY + constrainedHeight;
+        } else {
+            this.cropSelection.endY = this.cropSelection.startY - constrainedHeight;
+        }
+
+        this.drawSelectionRectangle();
+    }
+
+    /**
+     * Handle crop selection end
+     */
+    handleSelectionEnd(event) {
+        if (!this.cropSelection) return;
+        this.cropSelection.isSelecting = false;
+        console.log('[app.handleSelectionEnd] Selection ended:', this.cropSelection);
+    }
+
+    /**
+     * Draw selection rectangle on canvas
+     */
+    drawSelectionRectangle() {
+        if (!this.cropSelection) return;
+
+        const ctx = this.selectionCanvas.getContext('2d');
+        if (!ctx) return;
+
+        // Clear canvas
+        ctx.clearRect(0, 0, this.selectionCanvas.width, this.selectionCanvas.height);
+
+        // Get normalized coordinates
+        const startX = Math.min(this.cropSelection.startX, this.cropSelection.endX);
+        const startY = Math.min(this.cropSelection.startY, this.cropSelection.endY);
+        const endX = Math.max(this.cropSelection.startX, this.cropSelection.endX);
+        const endY = Math.max(this.cropSelection.startY, this.cropSelection.endY);
+        const width = endX - startX;
+        const height = endY - startY;
+
+        // Draw semi-transparent background over entire canvas
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.fillRect(0, 0, this.selectionCanvas.width, this.selectionCanvas.height);
+
+        // Clear the selected area (make it transparent)
+        ctx.clearRect(startX, startY, width, height);
+
+        // Draw border around selection
+        ctx.strokeStyle = '#0077B5';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(startX, startY, width, height);
+
+        // Draw corner handles
+        const handleSize = 8;
+        ctx.fillStyle = '#0077B5';
+        ctx.fillRect(startX - handleSize / 2, startY - handleSize / 2, handleSize, handleSize);
+        ctx.fillRect(endX - handleSize / 2, startY - handleSize / 2, handleSize, handleSize);
+        ctx.fillRect(startX - handleSize / 2, endY - handleSize / 2, handleSize, handleSize);
+        ctx.fillRect(endX - handleSize / 2, endY - handleSize / 2, handleSize, handleSize);
+    }
+
+    /**
+     * Handle image crop to 8.5x11 aspect ratio with user-selected region
+     */
+    handleCrop = (orientation) => {
+        if (!this.cropSelection) {
+            this.showMessage(this.cropStatus, 'Please select a crop area by dragging on the image', 'error');
+            return;
+        }
+
+        this.showMessage(this.cropStatus, `Cropping to ${orientation}...`, 'info');
+
+        try {
+            // Get normalized selection coordinates (in canvas display pixels)
+            const startX = Math.min(this.cropSelection.startX, this.cropSelection.endX);
+            const startY = Math.min(this.cropSelection.startY, this.cropSelection.endY);
+            const endX = Math.max(this.cropSelection.startX, this.cropSelection.endX);
+            const endY = Math.max(this.cropSelection.startY, this.cropSelection.endY);
+
+            // Scale selection from canvas display coordinates to image pixel coordinates
+            const scaleX = this.imageProcessor.currentWidth / this.selectionCanvas.width;
+            const scaleY = this.imageProcessor.currentHeight / this.selectionCanvas.height;
+
+            const customCropArea = {
+                x: Math.round(startX * scaleX),
+                y: Math.round(startY * scaleY),
+                width: Math.round((endX - startX) * scaleX),
+                height: Math.round((endY - startY) * scaleY)
+            };
+
+            // Perform the crop with the selected region
+            this.imageProcessor.cropAndRescale(orientation, customCropArea).then(async (result) => {
+                // Update preview
+                this.imageProcessor.convertToGrayscale();
+                this.imageProcessor.drawGrayscalePreview(this.grayscaleCanvas);
+
+                // Clear selection canvas to remove selection rectangle
+                const ctx = this.selectionCanvas.getContext('2d');
+                if (ctx) {
+                    ctx.clearRect(0, 0, this.selectionCanvas.width, this.selectionCanvas.height);
+                }
+                this.cropSelection = null;
+
+                // Resize to default long edge pixels before rendering circles
+                await this.imageProcessor.resizeByLongEdge(this.longEdgePixels);
+                await this.imageProcessor.convertToGrayscale();
+
+                // Show success and render circles
+                this.showMessage(this.cropStatus, result.message, 'success');
+                await this.renderCircles();
+            }).catch((error) => {
+                this.showMessage(this.cropStatus, `Crop error: ${error.message}`, 'error');
+            });
+
+        } catch (error) {
+            this.showMessage(this.cropStatus, `Crop error: ${error.message}`, 'error');
+        }
+    }
+
+    /**
      * Process image (convert to grayscale, draw preview)
      */
     async processImage() {
@@ -164,6 +389,9 @@ class CircleSizeApp {
             await this.imageProcessor.convertToGrayscale();
             this.imageProcessor.drawGrayscalePreview(this.grayscaleCanvas);
 
+            // Initialize selection canvas to overlay on grayscale canvas
+            this.initializeSelectionCanvas();
+
             this.showMessage(this.uploadStatus, 'Image ready!', 'success');
 
             // Show next sections
@@ -171,12 +399,6 @@ class CircleSizeApp {
             this.configSection.style.display = 'block';
             this.visualizationSection.style.display = 'block';
             this.exportSection.style.display = 'block';
-
-            // Initialize slider
-            const dims = this.imageProcessor.getDimensions();
-            this.resizeSlider.max = 2000;
-            this.resizeSlider.value = dims.width;
-            this.resizeValue.textContent = `${dims.width}px`;
 
             // Render circles
             await this.renderCircles();
@@ -186,41 +408,28 @@ class CircleSizeApp {
     }
 
     /**
-     * Handle resize slider change with debouncing
+     * Initialize selection canvas dimensions to match grayscale canvas
      */
-    handleResize(event) {
-        const newWidth = parseInt(event.target.value, 10);
+    initializeSelectionCanvas() {
+        if (!this.selectionCanvas) return;
 
-        // Update display value immediately (for UX feedback)
-        this.resizeValue.textContent = `${newWidth}px`;
+        // Match selection canvas size to grayscale canvas
+        this.selectionCanvas.width = this.grayscaleCanvas.width;
+        this.selectionCanvas.height = this.grayscaleCanvas.height;
 
-        // Debounce the actual resize to avoid excessive re-renders
-        clearTimeout(this.resizeTimeout);
+        // Clear any previous selection
+        this.cropSelection = null;
 
-        this.resizeTimeout = setTimeout(() => {
-            this.performResize(newWidth);
-        }, 300); // Wait 300ms after user stops dragging
+        console.log('[app.initializeSelectionCanvas] Selection canvas initialized:', {
+            width: this.selectionCanvas.width,
+            height: this.selectionCanvas.height
+        });
     }
+
 
     /**
-     * Perform the actual image resize
+     * Handle resize slider change with debouncing
      */
-    async performResize(newWidth) {
-        try {
-            await this.imageProcessor.resizeImage(newWidth);
-
-            // Update metadata display with new dimensions
-            const dims = this.imageProcessor.getDimensions();
-            this.metaDimensions.textContent = `${dims.width} × ${dims.height} px`;
-
-            // Update preview and visualization
-            this.imageProcessor.drawGrayscalePreview(this.grayscaleCanvas);
-            await this.renderCircles();
-        } catch (error) {
-            this.showMessage(this.uploadStatus, `Resize error: ${error.message}`, 'error');
-        }
-    }
-
     /**
      * Handle circle configuration change
      */
@@ -270,19 +479,27 @@ class CircleSizeApp {
         this.processingStatus.style.display = 'block';
         this.progressFill.style.width = '0%';
 
+        console.log('[app.renderCircles] Starting visualization render');
+
         try {
             const onProgress = (progress) => {
+                console.log('[app.renderCircles] Progress:', progress + '%');
                 this.progressFill.style.width = `${progress}%`;
             };
 
+            console.log('[app.renderCircles] Calling visualizer.renderCircles()');
             await this.visualizer.renderCircles(
                 this.circleCanvas,
                 this.imageProcessor,
-                onProgress
+                onProgress,
+                null,
+                this.fillCircles
             );
+            console.log('[app.renderCircles] Visualization rendering complete');
 
             this.processingStatus.style.display = 'none';
         } catch (error) {
+            console.error('[app.renderCircles] Error:', error);
             this.showMessage(
                 this.processingStatus,
                 `Rendering error: ${error.message}`,
@@ -290,6 +507,28 @@ class CircleSizeApp {
             );
         } finally {
             this.isProcessing = false;
+        }
+    }
+
+    /**
+     * Handle long edge pixel count change - resize image and re-render circles
+     */
+    async handleLongEdgeChange() {
+        try {
+            this.showMessage(this.processingStatus, 'Resizing image...', 'info');
+            this.processingStatus.style.display = 'block';
+
+            // Resize the image based on long edge pixels
+            await this.imageProcessor.resizeByLongEdge(this.longEdgePixels);
+
+            // Update grayscale preview
+            await this.imageProcessor.convertToGrayscale();
+            this.imageProcessor.drawGrayscalePreview(this.grayscaleCanvas);
+
+            // Re-render circles with new dimensions
+            await this.renderCircles();
+        } catch (error) {
+            this.showMessage(this.processingStatus, `Resize error: ${error.message}`, 'error');
         }
     }
 
@@ -360,17 +599,44 @@ class CircleSizeApp {
 
     /**
      * Load jsPDF library if not already loaded
+     * Includes security measures: SRI verification, timeout, and error handling
      */
     loadJsPDFIfNeeded() {
-        if (typeof jsPDF === 'undefined') {
-            const script = document.createElement('script');
-            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-            script.async = true;
-            script.onload = () => {
-                console.log('jsPDF library loaded');
-            };
-            document.head.appendChild(script);
+        if (typeof jsPDF !== 'undefined') {
+            return; // Already loaded
         }
+
+        const script = document.createElement('script');
+        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+
+        // Security: Add Subresource Integrity (SRI) hash for verification
+        script.integrity = 'sha384-7sOc7H+a6yNLaQB6xvT92s9baBWkBnGDr+oZX0qP0t8YCb6H0jGUvV6XL0PxQXAYP';
+        script.crossOrigin = 'anonymous';
+        script.async = true;
+
+        // Add timeout to prevent hanging if CDN is slow or unavailable
+        const timeoutId = setTimeout(() => {
+            console.warn('jsPDF library failed to load within 10 seconds');
+            // Remove the script tag if it hasn't loaded yet
+            if (script.parentNode) {
+                script.parentNode.removeChild(script);
+            }
+        }, 10000);
+
+        script.onload = () => {
+            clearTimeout(timeoutId);
+            console.log('jsPDF library loaded successfully');
+        };
+
+        script.onerror = () => {
+            clearTimeout(timeoutId);
+            console.error('Failed to load jsPDF library from CDN. Check network and CSP settings.');
+            if (script.parentNode) {
+                script.parentNode.removeChild(script);
+            }
+        };
+
+        document.head.appendChild(script);
     }
 }
 

@@ -44,29 +44,40 @@
 
             <!-- Preview Section -->
             <section class="section preview-section" id="previewSection" style="display: none;">
-                <h2>Step 2: Preview & Resize</h2>
+                <h2>Step 2: Preview & Crop</h2>
+
+                <!-- Crop Format Selection -->
+                <div class="controls-group">
+                    <p class="control-label">Select Crop Format (8.5×11, 100px long edge):</p>
+                    <div class="radio-group">
+                        <label class="radio-label">
+                            <input type="radio" name="cropOrientation" value="portrait" checked>
+                            <span>Portrait (11 tall × 8.5 wide)</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="cropOrientation" value="landscape">
+                            <span>Landscape (8.5 tall × 11 wide)</span>
+                        </label>
+                    </div>
+                </div>
 
                 <div class="preview-container">
                     <div class="preview-image-wrapper">
                         <h3>Grayscale Preview</h3>
-                        <canvas id="grayscaleCanvas" class="preview-canvas"></canvas>
+                        <p class="selection-instructions">Click and drag to select crop area</p>
+                        <div class="canvas-wrapper">
+                            <canvas id="grayscaleCanvas" class="preview-canvas"></canvas>
+                            <canvas id="selectionCanvas" class="selection-canvas"></canvas>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Resize Controls -->
+                <!-- Crop Button -->
                 <div class="controls-group">
-                    <div class="control-item">
-                        <label for="resizeSlider">Image Width:</label>
-                        <input
-                            type="range"
-                            id="resizeSlider"
-                            min="50"
-                            max="2000"
-                            step="10"
-                            class="slider"
-                        >
-                        <span id="resizeValue" class="control-value">500px</span>
-                    </div>
+                    <button id="cropButton" class="button button-primary">
+                        Crop Selection
+                    </button>
+                    <div id="cropStatus" class="status-message" style="display: none;"></div>
                 </div>
             </section>
 
@@ -132,12 +143,37 @@
                     </div>
                 </div>
 
+                <!-- Long Edge Size Control -->
+                <div class="controls-group">
+                    <div class="control-item">
+                        <label for="longEdgeSlider">Long Edge Pixels:</label>
+                        <input
+                            type="range"
+                            id="longEdgeSlider"
+                            min="10"
+                            max="500"
+                            value="100"
+                            step="5"
+                            class="slider"
+                        >
+                        <span id="longEdgeValue" class="control-value">100px</span>
+                    </div>
+                </div>
+
                 <button id="resetButton" class="button button-secondary">Reset to Defaults</button>
             </section>
 
             <!-- Circle Visualization Section -->
             <section class="section visualization-section" id="visualizationSection" style="display: none;">
                 <h2>Step 4: Circle Visualization</h2>
+
+                <!-- Circle Fill Toggle -->
+                <div class="controls-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="fillCirclesCheckbox">
+                        Fill Circles
+                    </label>
+                </div>
 
                 <div class="visualization-container">
                     <canvas id="circleCanvas" class="circle-canvas"></canvas>

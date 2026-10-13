@@ -269,17 +269,42 @@ a:hover {
     align-self: flex-start;
 }
 
-.preview-canvas,
+.selection-instructions {
+    font-size: 0.85rem;
+    color: var(--color-text-tertiary);
+    margin-bottom: var(--spacing-sm);
+    font-style: italic;
+}
+
+.canvas-wrapper {
+    position: relative;
+    display: inline-block;
+    width: 100%;
+}
+
+.preview-canvas {
+    max-width: 100%;
+    border: 1px solid var(--color-border);
+    background-color: #f9f9f9;
+    border-radius: 4px;
+    display: block;
+    height: auto;
+}
+
+.selection-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    cursor: crosshair;
+    border-radius: 4px;
+}
+
 .circle-canvas {
     max-width: 100%;
     border: 1px solid var(--color-border);
     background-color: #f9f9f9;
     border-radius: 4px;
     display: block;
-}
-
-.preview-canvas {
-    height: auto;
 }
 
 .visualization-container {
@@ -428,6 +453,25 @@ a:hover {
     cursor: not-allowed;
 }
 
+.button-group {
+    display: flex;
+    gap: var(--spacing-sm);
+    flex-wrap: wrap;
+    margin-bottom: var(--spacing-md);
+}
+
+.button-group .button {
+    flex: 1;
+    min-width: 200px;
+}
+
+.control-label {
+    font-weight: 500;
+    color: var(--color-text-primary);
+    margin-bottom: var(--spacing-sm);
+    font-size: 0.95rem;
+}
+
 /* ============================================================================
    10. Progress Bar
    ========================================================================== */
@@ -468,6 +512,36 @@ a:hover {
     width: 18px;
     height: 18px;
     accent-color: var(--color-accent);
+}
+
+/* ============================================================================
+   11b. Radio Buttons
+   ========================================================================== */
+
+.radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.radio-label {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    user-select: none;
+}
+
+.radio-label input[type="radio"] {
+    margin-right: var(--spacing-sm);
+    cursor: pointer;
+    width: 18px;
+    height: 18px;
+    accent-color: var(--color-accent);
+}
+
+.radio-label span {
+    font-weight: 400;
 }
 
 /* ============================================================================
