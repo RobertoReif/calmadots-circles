@@ -21,6 +21,9 @@ class CircleSizeApp {
      * Initialize DOM elements
      */
     initializeElements() {
+        // Debug element
+        this.canvasDebug = document.getElementById('canvasDebug');
+
         // File input
         this.imageInput = document.getElementById('imageInput');
         this.fileInputLabel = document.querySelector('.file-input-label');
@@ -445,6 +448,9 @@ class CircleSizeApp {
             selectionCanvasInternal: `${this.selectionCanvas.width}x${this.selectionCanvas.height}`,
             selectionCanvasCSSStyle: `${this.selectionCanvas.style.width} x ${this.selectionCanvas.style.height}`
         });
+
+        // Show debug info on page
+        this.showCanvasDebug();
     }
 
 
@@ -610,6 +616,35 @@ class CircleSizeApp {
         } finally {
             this.exportButton.disabled = false;
         }
+    }
+
+    /**
+     * Show canvas dimensions debug info
+     */
+    showCanvasDebug() {
+        if (!this.canvasDebug) return;
+
+        const grayscaleRect = this.grayscaleCanvas.getBoundingClientRect();
+        const selectionRect = this.selectionCanvas.getBoundingClientRect();
+
+        const debugInfo = `
+<strong>Grayscale Canvas:</strong><br>
+Internal: ${this.grayscaleCanvas.width}×${this.grayscaleCanvas.height}px<br>
+Display: ${Math.round(grayscaleRect.width)}×${Math.round(grayscaleRect.height)}px<br>
+CSS: ${getComputedStyle(this.grayscaleCanvas).width} × ${getComputedStyle(this.grayscaleCanvas).height}<br>
+<br>
+<strong>Selection Canvas:</strong><br>
+Internal: ${this.selectionCanvas.width}×${this.selectionCanvas.height}px<br>
+Display: ${Math.round(selectionRect.width)}×${Math.round(selectionRect.height)}px<br>
+CSS: ${getComputedStyle(this.selectionCanvas).width} × ${getComputedStyle(this.selectionCanvas).height}<br>
+<br>
+<strong>Match Status:</strong><br>
+Display sizes match: ${Math.round(grayscaleRect.width) === Math.round(selectionRect.width) && Math.round(grayscaleRect.height) === Math.round(selectionRect.height) ? '✓ YES' : '✗ NO'}<br>
+Internal match display: ${this.selectionCanvas.width === Math.round(grayscaleRect.width) && this.selectionCanvas.height === Math.round(grayscaleRect.height) ? '✓ YES' : '✗ NO'}
+        `;
+
+        this.canvasDebug.innerHTML = debugInfo;
+        this.canvasDebug.style.display = 'block';
     }
 
     /**
