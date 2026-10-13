@@ -132,11 +132,16 @@ class PDFExporter {
             const imgData = croppedCanvas.toDataURL('image/png');
 
             console.log('About to add image with:', { x, y, imgWidth, imgHeight, pageWidth, pageHeight, margin });
+            console.log('Page info:', pdf.internal.pageSize);
 
             // Add image to PDF
             pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
 
             console.log('Image added to PDF');
+            console.log('PDF internal state after addImage:', {
+                currentPage: pdf.internal.getNumberOfPages(),
+                pageSize: pdf.internal.pageSize.getWidth() + 'x' + pdf.internal.pageSize.getHeight()
+            });
 
             // Add metadata if requested (positioned below image with proper spacing)
             if (finalOptions.includeMetadata && imageMetadata) {
