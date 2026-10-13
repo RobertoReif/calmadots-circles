@@ -374,6 +374,9 @@ class CircleSizeApp {
                 }
                 this.cropSelection = null;
 
+                // Reinitialize selection canvas for new image dimensions
+                this.initializeSelectionCanvas();
+
                 // Resize to default long edge pixels before rendering circles
                 await this.imageProcessor.resizeByLongEdge(this.longEdgePixels);
                 await this.imageProcessor.convertToGrayscale();
