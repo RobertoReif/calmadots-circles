@@ -55,9 +55,10 @@ class PDFExporter {
 
             const finalOptions = { ...defaultOptions, ...options };
 
-            // Determine PDF orientation and page size
-            const canvasRatio = canvas.width / canvas.height;
-            const pageOrientation = canvasRatio > 1 ? 'l' : 'p'; // landscape or portrait
+            // Determine PDF orientation based on actual image dimensions (not padded canvas)
+            // This ensures the page aspect ratio matches the image aspect ratio
+            const imageAspectRatio = imageMetadata.imageWidth / imageMetadata.imageHeight;
+            const pageOrientation = imageAspectRatio > 1 ? 'l' : 'p'; // landscape or portrait
 
             // Create PDF with appropriate page size
             const pdf = new this.jsPDFLib({
