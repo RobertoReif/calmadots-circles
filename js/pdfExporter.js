@@ -39,13 +39,16 @@ class PDFExporter {
         originalFilename = 'image',
         imageMetadata = null
     ) {
+        console.log('exportToPDF called with:', { filename, options, originalFilename });
         try {
             if (!this.pdfLibraryLoaded) {
+                console.log('PDF library not loaded');
                 return {
                     success: false,
                     message: 'jsPDF library not loaded. Cannot export to PDF.',
                 };
             }
+            console.log('PDF library is loaded, proceeding with export');
 
             // Set defaults
             const defaultOptions = {
