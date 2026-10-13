@@ -427,29 +427,43 @@ class CircleSizeApp {
     initializeSelectionCanvas() {
         if (!this.selectionCanvas) return;
 
-        // Set selection canvas to MATCH the grayscale canvas internal dimensions
-        // This is key: canvas.width and canvas.height are the actual content size
-        const width = this.grayscaleCanvas.width;
-        const height = this.grayscaleCanvas.height;
+        // Calculate a reasonable display size that fits on screen
+        // Max 500px on the long edge, maintain aspect ratio
+        const grayscaleWidth = this.grayscaleCanvas.width;
+        const grayscaleHeight = this.grayscaleCanvas.height;
+        const maxDisplay = 500;
 
-        this.selectionCanvas.width = width;
-        this.selectionCanvas.height = height;
+        let displayWidth, displayHeight;
+        const aspect = grayscaleWidth / grayscaleHeight;
 
-        // Set CSS dimensions to match internal dimensions for 1:1 pixel mapping
-        this.selectionCanvas.style.width = width + 'px';
-        this.selectionCanvas.style.height = height + 'px';
-
-        // Also set preview canvas CSS dimensions if not already set
-        if (!this.grayscaleCanvas.style.width || this.grayscaleCanvas.style.width === '') {
-            this.grayscaleCanvas.style.width = width + 'px';
-            this.grayscaleCanvas.style.height = height + 'px';
+        if (aspect > 1) {
+            // Wider than tall
+            displayWidth = Math.min(maxDisplay, grayscaleWidth);
+            displayHeight = Math.round(displayWidth / aspect);
+        } else {
+            // Taller than wide
+            displayHeight = Math.min(maxDisplay, grayscaleHeight);
+            displayWidth = Math.round(displayHeight * aspect);
         }
+
+        // Set selection canvas internal dimensions to match grayscale
+        this.selectionCanvas.width = grayscaleWidth;
+        this.selectionCanvas.height = grayscaleHeight;
+
+        // Set CSS display dimensions to the calculated reasonable size
+        this.selectionCanvas.style.width = displayWidth + 'px';
+        this.selectionCanvas.style.height = displayHeight + 'px';
+
+        // Also set grayscale canvas CSS dimensions
+        this.grayscaleCanvas.style.width = displayWidth + 'px';
+        this.grayscaleCanvas.style.height = displayHeight + 'px';
 
         // Clear any previous selection
         this.cropSelection = null;
 
         console.log('[app.initializeSelectionCanvas] Detailed Debug:', {
-            grayscaleCanvasInternal: `${this.grayscaleCanvas.width}x${this.grayscaleCanvas.height}`,
+            grayscaleCanvasInternal: `${grayscaleWidth}x${grayscaleHeight}`,
+            calculatedDisplay: `${displayWidth}x${displayHeight}`,
             grayscaleDisplaySize: `${Math.round(this.grayscaleCanvas.getBoundingClientRect().width)}x${Math.round(this.grayscaleCanvas.getBoundingClientRect().height)}`,
             selectionCanvasInternal: `${this.selectionCanvas.width}x${this.selectionCanvas.height}`,
             selectionCanvasCSSStyle: `${this.selectionCanvas.style.width} x ${this.selectionCanvas.style.height}`
