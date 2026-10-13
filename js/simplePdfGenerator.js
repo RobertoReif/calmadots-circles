@@ -164,9 +164,10 @@ class SimplePdfGenerator {
             pdf += '<< /Type /XObject /Subtype /Image /Width ' + image.width + ' /Height ' + image.height;
             pdf += ' /ColorSpace /DeviceRGB /BitsPerComponent 8';
 
-            // Embed as base64 PNG using DCTDecode (JPEG compression) which preserves the PNG encoding
+            // For PNG data, we use the image data directly without filter
+            // PNG already has its own compression, double-filtering would corrupt it
             const imageBytes = this.base64ToBytes(image.data);
-            pdf += ` /Filter /DCTDecode /Length ${imageBytes.length} >>\n`;
+            pdf += ` /Length ${imageBytes.length} >>\n`;
             pdf += 'stream\n';
             pdf += this.bytesToString(imageBytes);
             pdf += '\nendstream\n';
