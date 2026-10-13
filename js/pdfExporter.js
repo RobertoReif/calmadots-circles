@@ -69,33 +69,53 @@ class PDFExporter {
             // Get page dimensions
             const pageWidth = pdf.internal.pageSize.getWidth();
             const pageHeight = pdf.internal.pageSize.getHeight();
-            const margin = 10;
+            const margin = 12; // Equal margin on all sides
+
+            // Create padded canvas to prevent edge circles from being cropped
+            const padPixels = 20; // pixels of padding around the canvas
+            const paddedCanvas = document.createElement('canvas');
+            paddedCanvas.width = canvas.width + (padPixels * 2);
+            paddedCanvas.height = canvas.height + (padPixels * 2);
+
+            const paddedCtx = paddedCanvas.getContext('2d');
+            // Fill with white background
+            paddedCtx.fillStyle = '#ffffff';
+            paddedCtx.fillRect(0, 0, paddedCanvas.width, paddedCanvas.height);
+            // Draw original canvas in center
+            paddedCtx.drawImage(canvas, padPixels, padPixels);
+
+            // Calculate max dimensions for image on page
             const maxWidth = pageWidth - (margin * 2);
             const maxHeight = pageHeight - (margin * 2);
 
             // Calculate scaling to fit on page
             let imgWidth = maxWidth;
-            let imgHeight = (canvas.height / canvas.width) * imgWidth;
+            let imgHeight = (paddedCanvas.height / paddedCanvas.width) * imgWidth;
 
             if (imgHeight > maxHeight) {
                 imgHeight = maxHeight;
-                imgWidth = (canvas.width / canvas.height) * imgHeight;
+                imgWidth = (paddedCanvas.width / paddedCanvas.height) * imgHeight;
             }
 
-            // Center on page
-            const x = (pageWidth - imgWidth) / 2;
-            const y = margin;
+            // Calculate vertical centering (accounting for metadata space if included)
+            const metadataHeight = (finalOptions.includeMetadata && imageMetadata) ? 15 : 0;
+            const totalContentHeight = imgHeight + metadataHeight;
+            const availableHeight = pageHeight - (margin * 2);
+            const topPadding = (availableHeight - totalContentHeight) / 2;
 
-            // Convert canvas to image data
-            const imgData = canvas.toDataURL('image/png');
+            const x = (pageWidth - imgWidth) / 2;
+            const y = margin + topPadding;
+
+            // Convert padded canvas to image data
+            const imgData = paddedCanvas.toDataURL('image/png');
 
             // Add image to PDF
             pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
 
-            // Add metadata if requested
+            // Add metadata if requested (positioned below image with proper spacing)
             if (finalOptions.includeMetadata && imageMetadata) {
                 pdf.setFontSize(8);
-                let yPos = y + imgHeight + 5;
+                let yPos = y + imgHeight + 3;
                 pdf.text(`Image: ${originalFilename}`, margin, yPos);
                 yPos += 3;
                 pdf.text(`Size: ${imageMetadata.imageWidth}×${imageMetadata.imageHeight}px`, margin, yPos);
