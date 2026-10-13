@@ -50,7 +50,7 @@ class PDFExporter {
             // Set defaults
             const defaultOptions = {
                 quality: 'standard', // 'standard' or 'high'
-                includeMetadata: true,
+                includeMetadata: false, // Don't include metadata by default
             };
 
             const finalOptions = { ...defaultOptions, ...options };
@@ -72,7 +72,8 @@ class PDFExporter {
             const margin = 12; // Equal margin on all sides
 
             // Create padded canvas to prevent edge circles from being cropped
-            const padPixels = 20; // pixels of padding around the canvas
+            // Use larger padding (50px) to ensure even circles at edges are fully visible
+            const padPixels = 50; // pixels of padding around the canvas
             const paddedCanvas = document.createElement('canvas');
             paddedCanvas.width = canvas.width + (padPixels * 2);
             paddedCanvas.height = canvas.height + (padPixels * 2);
@@ -84,11 +85,11 @@ class PDFExporter {
             // Draw original canvas in center
             paddedCtx.drawImage(canvas, padPixels, padPixels);
 
-            // Calculate max dimensions for image on page
+            // Calculate max dimensions for image on page (with equal margins)
             const maxWidth = pageWidth - (margin * 2);
             const maxHeight = pageHeight - (margin * 2);
 
-            // Calculate scaling to fit on page
+            // Calculate scaling to fit on page while preserving aspect ratio
             let imgWidth = maxWidth;
             let imgHeight = (paddedCanvas.height / paddedCanvas.width) * imgWidth;
 
@@ -97,14 +98,9 @@ class PDFExporter {
                 imgWidth = (paddedCanvas.width / paddedCanvas.height) * imgHeight;
             }
 
-            // Calculate vertical centering (accounting for metadata space if included)
-            const metadataHeight = (finalOptions.includeMetadata && imageMetadata) ? 15 : 0;
-            const totalContentHeight = imgHeight + metadataHeight;
-            const availableHeight = pageHeight - (margin * 2);
-            const topPadding = (availableHeight - totalContentHeight) / 2;
-
+            // Center image on page with equal margins on all sides
             const x = (pageWidth - imgWidth) / 2;
-            const y = margin + topPadding;
+            const y = (pageHeight - imgHeight) / 2;
 
             // Convert padded canvas to image data
             const imgData = paddedCanvas.toDataURL('image/png');
