@@ -12,8 +12,8 @@ class SimplePdfGenerator {
      * @returns {Blob} PDF file as Blob
      */
     static canvasToPdf(canvas, filename = 'document.pdf', metadata = {}) {
-        // Get canvas as PNG data URL
-        const imageData = canvas.toDataURL('image/png');
+        // Get canvas as JPEG data URL (better for PDF embedding than PNG)
+        const imageData = canvas.toDataURL('image/jpeg', 0.95);
 
         // Extract base64 data
         const base64Data = imageData.split(',')[1];
@@ -149,11 +149,11 @@ class SimplePdfGenerator {
 
             pdf += `${imageObjectStart + i} 0 obj\n`;
             pdf += '<< /Type /XObject /Subtype /Image /Width ' + image.width + ' /Height ' + image.height;
-            pdf += ' /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode';
+            pdf += ' /ColorSpace /DeviceRGB /BitsPerComponent 8';
 
-            // For simplicity, embed as base64 without compression
+            // Embed as base64 PNG using DCTDecode (JPEG compression) which preserves the PNG encoding
             const imageBytes = this.base64ToBytes(image.data);
-            pdf += ` /Length ${imageBytes.length} >>\n`;
+            pdf += ` /Filter /DCTDecode /Length ${imageBytes.length} >>\n`;
             pdf += 'stream\n';
             pdf += this.bytesToString(imageBytes);
             pdf += '\nendstream\n';
