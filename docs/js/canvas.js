@@ -64,15 +64,20 @@ class CircleVisualizer {
         const scaledWidth = width * autoScale;
         const scaledHeight = height * autoScale;
 
+        // Add padding to canvas to prevent circles at edges from being clipped
+        // Use maxRadius as minimum padding to accommodate full circle extents
+        const paddingPixels = Math.ceil(this.config.maxRadius * autoScale) + 10;
+
         console.log('[renderCircles] Starting render:', {
             originalDimensions: `${width}x${height}`,
             autoScale,
             scaledDimensions: `${scaledWidth}x${scaledHeight}`,
+            paddingPixels: paddingPixels,
             config: this.config
         });
 
-        canvas.width = scaledWidth;
-        canvas.height = scaledHeight;
+        canvas.width = scaledWidth + (paddingPixels * 2);
+        canvas.height = scaledHeight + (paddingPixels * 2);
 
         console.log('[renderCircles] Canvas dimensions after setting:', {
             canvasWidth: canvas.width,
@@ -88,9 +93,9 @@ class CircleVisualizer {
             throw new Error('Could not get canvas context');
         }
 
-        // Set white background
+        // Set white background (fill entire canvas including padding)
         ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, scaledWidth, scaledHeight);
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
         console.log('[renderCircles] White background filled');
 
         // Sample every pixel (pixelStep = 1) for full coverage
@@ -126,8 +131,9 @@ class CircleVisualizer {
                         // Scale position only (not radius)
                         // This ensures circles are spaced far enough apart to not overlap
                         // while keeping their relative size differences
-                        const scaledX = x * autoScale;
-                        const scaledY = y * autoScale;
+                        // Offset by padding to prevent edge circles from being clipped
+                        const scaledX = x * autoScale + paddingPixels;
+                        const scaledY = y * autoScale + paddingPixels;
 
                         // Draw circle at scaled position with original radius
                         ctx.beginPath();

@@ -71,39 +71,26 @@ class PDFExporter {
             const pageHeight = pdf.internal.pageSize.getHeight();
             const margin = 12; // Equal margin on all sides
 
-            // Create padded canvas to prevent edge circles from being cropped
-            // Use larger padding (50px) to ensure even circles at edges are fully visible
-            const padPixels = 50; // pixels of padding around the canvas
-            const paddedCanvas = document.createElement('canvas');
-            paddedCanvas.width = canvas.width + (padPixels * 2);
-            paddedCanvas.height = canvas.height + (padPixels * 2);
-
-            const paddedCtx = paddedCanvas.getContext('2d');
-            // Fill with white background
-            paddedCtx.fillStyle = '#ffffff';
-            paddedCtx.fillRect(0, 0, paddedCanvas.width, paddedCanvas.height);
-            // Draw original canvas in center
-            paddedCtx.drawImage(canvas, padPixels, padPixels);
-
+            // Canvas already has padding built in from renderCircles()
             // Calculate max dimensions for image on page (with equal margins)
             const maxWidth = pageWidth - (margin * 2);
             const maxHeight = pageHeight - (margin * 2);
 
             // Calculate scaling to fit on page while preserving aspect ratio
             let imgWidth = maxWidth;
-            let imgHeight = (paddedCanvas.height / paddedCanvas.width) * imgWidth;
+            let imgHeight = (canvas.height / canvas.width) * imgWidth;
 
             if (imgHeight > maxHeight) {
                 imgHeight = maxHeight;
-                imgWidth = (paddedCanvas.width / paddedCanvas.height) * imgHeight;
+                imgWidth = (canvas.width / canvas.height) * imgHeight;
             }
 
             // Center image on page with equal margins on all sides
             const x = (pageWidth - imgWidth) / 2;
             const y = (pageHeight - imgHeight) / 2;
 
-            // Convert padded canvas to image data
-            const imgData = paddedCanvas.toDataURL('image/png');
+            // Convert canvas to image data (already has padding from rendering)
+            const imgData = canvas.toDataURL('image/png');
 
             // Add image to PDF
             pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);

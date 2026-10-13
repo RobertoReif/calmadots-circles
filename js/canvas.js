@@ -45,64 +45,146 @@ class CircleVisualizer {
 
     /**
      * Render circles on canvas from grayscale data
+     * Uses chunked rendering with requestAnimationFrame to prevent UI blocking
      * @param {HTMLCanvasElement} canvas - Canvas element
      * @param {ImageProcessor} imageProcessor - ImageProcessor instance with grayscale data
      * @param {function} onProgress - Callback for progress updates (0-100)
+     * @param {number} userScale - Optional user-specified scale factor (overrides auto-scaling)
+     * @param {boolean} fillCircles - Whether to fill circles (true) or stroke them (false)
+     * @returns {Promise} Resolves when rendering is complete
      */
-    async renderCircles(canvas, imageProcessor, onProgress = null) {
+    async renderCircles(canvas, imageProcessor, onProgress = null, userScale = null, fillCircles = false) {
         const { width, height } = imageProcessor.getDimensions();
 
-        canvas.width = width;
-        canvas.height = height;
+        // Auto-calculate scale to prevent overlap
+        // Minimum distance between circle centers: 2 * maxRadius
+        const minDistanceBetweenCenters = 2 * this.config.maxRadius;
+        const autoScale = userScale || minDistanceBetweenCenters;
+
+        const scaledWidth = width * autoScale;
+        const scaledHeight = height * autoScale;
+
+        // Add padding to canvas to prevent circles at edges from being clipped
+        // Use maxRadius as minimum padding to accommodate full circle extents
+        const paddingPixels = Math.ceil(this.config.maxRadius * autoScale) + 10;
+
+        console.log('[renderCircles] Starting render:', {
+            originalDimensions: `${width}x${height}`,
+            autoScale,
+            scaledDimensions: `${scaledWidth}x${scaledHeight}`,
+            paddingPixels: paddingPixels,
+            config: this.config
+        });
+
+        canvas.width = scaledWidth + (paddingPixels * 2);
+        canvas.height = scaledHeight + (paddingPixels * 2);
+
+        console.log('[renderCircles] Canvas dimensions after setting:', {
+            canvasWidth: canvas.width,
+            canvasHeight: canvas.height,
+            canvasClientWidth: canvas.clientWidth,
+            canvasClientHeight: canvas.clientHeight,
+            canvasDisplay: window.getComputedStyle(canvas).display,
+            canvasVisibility: window.getComputedStyle(canvas).visibility
+        });
 
         const ctx = canvas.getContext('2d');
         if (!ctx) {
             throw new Error('Could not get canvas context');
         }
 
-        // Set white background
+        // Set white background (fill entire canvas including padding)
         ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, width, height);
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        console.log('[renderCircles] White background filled');
 
-        // Calculate pixel step (for spacing)
+        // Sample every pixel (pixelStep = 1) for full coverage
+        // spacing adds additional gaps if desired (0 = every pixel)
         const pixelStep = 1 + this.config.spacing;
 
         // Total pixels to process (for progress)
         const totalPixels = Math.ceil(width / pixelStep) * Math.ceil(height / pixelStep);
         let processedPixels = 0;
+        let circlesDrawn = 0;
 
-        // Render circles
-        for (let y = 0; y < height; y += pixelStep) {
-            for (let x = 0; x < width; x += pixelStep) {
-                const pixelValue = imageProcessor.getPixelGrayscale(x, y);
-                const { radius, strokeWidth } = this.getCircleProperties(pixelValue);
+        // Render circles in chunks to avoid blocking the UI
+        // Each chunk processes up to CHUNK_HEIGHT rows of pixels
+        const CHUNK_HEIGHT = 50;
+        let currentY = 0;
 
-                // Skip very small circles (white pixels) if radius < 0.5
-                if (radius < 0.5) {
-                    continue;
+        return new Promise((resolve) => {
+            const renderChunk = () => {
+                const chunkEndY = Math.min(currentY + CHUNK_HEIGHT * pixelStep, height);
+
+                // Process one chunk of rows
+                for (let y = currentY; y < chunkEndY; y += pixelStep) {
+                    for (let x = 0; x < width; x += pixelStep) {
+                        const pixelValue = imageProcessor.getPixelGrayscale(x, y);
+                        const { radius, strokeWidth } = this.getCircleProperties(pixelValue);
+
+                        // Skip very small circles (white pixels) if radius < 0.5
+                        if (radius < 0.5) {
+                            processedPixels++;
+                            continue;
+                        }
+
+                        // Scale position only (not radius)
+                        // This ensures circles are spaced far enough apart to not overlap
+                        // while keeping their relative size differences
+                        // Offset by padding to prevent edge circles from being clipped
+                        const scaledX = x * autoScale + paddingPixels;
+                        const scaledY = y * autoScale + paddingPixels;
+
+                        // Draw circle at scaled position with original radius
+                        ctx.beginPath();
+                        ctx.arc(scaledX, scaledY, radius, 0, 2 * Math.PI);
+
+                        if (fillCircles) {
+                            // Fill circle with black
+                            ctx.fillStyle = '#000000';
+                            ctx.fill();
+                        } else {
+                            // Stroke circle (hollow)
+                            ctx.strokeStyle = '#000000';
+                            ctx.lineWidth = strokeWidth;
+                            ctx.stroke();
+                        }
+
+                        circlesDrawn++;
+                        processedPixels++;
+                    }
                 }
 
-                // Draw hollow circle
-                ctx.strokeStyle = '#000000';
-                ctx.lineWidth = strokeWidth;
-                ctx.fillStyle = 'transparent';
-                ctx.beginPath();
-                ctx.arc(x, y, radius, 0, 2 * Math.PI);
-                ctx.stroke();
-
-                processedPixels++;
-
-                // Update progress every 100 pixels
-                if (onProgress && processedPixels % 100 === 0) {
+                // Update progress
+                if (onProgress) {
                     const progress = Math.min(100, Math.round((processedPixels / totalPixels) * 100));
                     onProgress(progress);
                 }
-            }
-        }
 
-        if (onProgress) {
-            onProgress(100);
-        }
+                // Check if we're done
+                if (chunkEndY < height) {
+                    currentY = chunkEndY;
+                    // Yield to browser using requestAnimationFrame
+                    requestAnimationFrame(renderChunk);
+                } else {
+                    // Rendering complete
+                    console.log('[renderCircles] Rendering complete:', {
+                        circlesDrawn,
+                        processedPixels,
+                        totalPixels,
+                        canvasSize: `${canvas.width}x${canvas.height}`
+                    });
+                    if (onProgress) {
+                        onProgress(100);
+                    }
+                    resolve();
+                }
+            };
+
+            // Start the chunked rendering
+            console.log('[renderCircles] Starting chunked rendering with CHUNK_HEIGHT=50');
+            requestAnimationFrame(renderChunk);
+        });
     }
 
     /**
