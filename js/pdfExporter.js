@@ -78,22 +78,33 @@ class PDFExporter {
             const maxCircleExtent = (imageMetadata.maxRadius + imageMetadata.strokeWidth) * autoScale;
             const paddingPixels = Math.ceil(maxCircleExtent) + 50;
 
-            // Create a cropped canvas without the padding
+            // Create a cropped canvas that includes the circle artwork plus their radii
+            // Circles at edges extend beyond their centers, so we need to account for that
             const croppedCanvas = document.createElement('canvas');
             const actualWidth = imageMetadata.imageWidth * autoScale;
             const actualHeight = imageMetadata.imageHeight * autoScale;
 
-            croppedCanvas.width = actualWidth;
-            croppedCanvas.height = actualHeight;
+            // Include space for circle radius at edges so no circles are cut off
+            const radiusMargin = Math.ceil(imageMetadata.maxRadius);
+            const croppedWidth = actualWidth + (radiusMargin * 2);
+            const croppedHeight = actualHeight + (radiusMargin * 2);
+
+            croppedCanvas.width = croppedWidth;
+            croppedCanvas.height = croppedHeight;
 
             const croppedCtx = croppedCanvas.getContext('2d');
-            // Draw the circle area from the padded canvas (skipping the padding)
+            // Fill with white background
+            croppedCtx.fillStyle = '#ffffff';
+            croppedCtx.fillRect(0, 0, croppedWidth, croppedHeight);
+
+            // Draw the circle area from the padded canvas, accounting for circle radius at edges
+            // Start cropping from (paddingPixels - radiusMargin) to include circle edges
             croppedCtx.drawImage(
                 canvas,
-                paddingPixels, paddingPixels,  // source x, y (where circles start)
-                actualWidth, actualHeight,      // source width, height
-                0, 0,                           // dest x, y
-                actualWidth, actualHeight       // dest width, height
+                paddingPixels - radiusMargin, paddingPixels - radiusMargin,  // source x, y
+                croppedWidth, croppedHeight,                                  // source width, height
+                0, 0,                                                         // dest x, y
+                croppedWidth, croppedHeight                                   // dest width, height
             );
 
             // Calculate max available space on page with equal margins
