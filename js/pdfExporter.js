@@ -71,31 +71,49 @@ class PDFExporter {
             const pageHeight = pdf.internal.pageSize.getHeight();
             const margin = 2.54; // 0.1 inch margin on all sides (2.54mm = 0.1 inch)
 
-            // Canvas has padding from renderCircles() - use it directly
-            const canvasWidth = canvas.width;
-            const canvasHeight = canvas.height;
+            // Canvas has padding added during rendering to prevent circle clipping
+            // We need to crop this padding out to get the actual circle artwork
+            const autoScale = 2 * imageMetadata.maxRadius; // Default scale used in canvas.js
+            const maxCircleExtent = (imageMetadata.maxRadius + imageMetadata.strokeWidth) * autoScale;
+            const paddingPixels = Math.ceil(maxCircleExtent) + 50;
+
+            // Create a cropped canvas without the padding
+            const croppedCanvas = document.createElement('canvas');
+            const actualWidth = imageMetadata.imageWidth * autoScale;
+            const actualHeight = imageMetadata.imageHeight * autoScale;
+
+            croppedCanvas.width = actualWidth;
+            croppedCanvas.height = actualHeight;
+
+            const croppedCtx = croppedCanvas.getContext('2d');
+            // Draw the circle area from the padded canvas (skipping the padding)
+            croppedCtx.drawImage(
+                canvas,
+                paddingPixels, paddingPixels,  // source x, y (where circles start)
+                actualWidth, actualHeight,      // source width, height
+                0, 0,                           // dest x, y
+                actualWidth, actualHeight       // dest width, height
+            );
 
             // Calculate max available space on page with equal margins
             const maxWidth = pageWidth - (margin * 2);
             const maxHeight = pageHeight - (margin * 2);
 
             // Calculate scaling to fit on page while preserving aspect ratio
-            // The canvas already has all the padding it needs
             let imgWidth = maxWidth;
-            let imgHeight = (canvasHeight / canvasWidth) * imgWidth;
+            let imgHeight = (croppedCanvas.height / croppedCanvas.width) * imgWidth;
 
             if (imgHeight > maxHeight) {
                 imgHeight = maxHeight;
-                imgWidth = (canvasWidth / canvasHeight) * imgHeight;
+                imgWidth = (croppedCanvas.width / croppedCanvas.height) * imgHeight;
             }
 
             // Center image perfectly on page with equal margins on all 4 sides
-            // This centers the entire canvas (including its padding) on the page
             const x = margin + ((maxWidth - imgWidth) / 2);
             const y = margin + ((maxHeight - imgHeight) / 2);
 
-            // Convert canvas to image data
-            const imgData = canvas.toDataURL('image/png');
+            // Convert cropped canvas to image data (no padding)
+            const imgData = croppedCanvas.toDataURL('image/png');
 
             // Add image to PDF
             pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
