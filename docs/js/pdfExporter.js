@@ -112,11 +112,12 @@ class PDFExporter {
             const maxHeight = pageHeight - (margin * 2);
 
             // Calculate scaling to fit on page while preserving aspect ratio
-            let imgWidth = maxWidth;
+            // Reduce scale slightly (90%) to ensure there's room for centering
+            let imgWidth = maxWidth * 0.9;
             let imgHeight = (croppedCanvas.height / croppedCanvas.width) * imgWidth;
 
-            if (imgHeight > maxHeight) {
-                imgHeight = maxHeight;
+            if (imgHeight > maxHeight * 0.9) {
+                imgHeight = maxHeight * 0.9;
                 imgWidth = (croppedCanvas.width / croppedCanvas.height) * imgHeight;
             }
 
