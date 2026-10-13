@@ -99,6 +99,20 @@ class SimplePdfGenerator {
         const x = margin + ((maxWidth - displayWidth) / 2);
         const y = margin + ((maxHeight - displayHeight) / 2);
 
+        console.log('PDF Debug:', {
+            imageWidth: width,
+            imageHeight: height,
+            displayWidth: displayWidth,
+            displayHeight: displayHeight,
+            pageWidth: pageWidth,
+            pageHeight: pageHeight,
+            margin: margin,
+            maxWidth: maxWidth,
+            maxHeight: maxHeight,
+            x: x,
+            y: y
+        });
+
         // PDF content stream
         const content = [
             'q',
