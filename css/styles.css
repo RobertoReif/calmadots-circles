@@ -308,6 +308,7 @@ a:hover {
     cursor: crosshair;
     border-radius: 4px;
     display: block;
+    border: 2px solid red !important;
 }
 
 .circle-canvas {
