@@ -125,20 +125,6 @@ class PDFExporter {
             const x = margin + ((maxWidth - imgWidth) / 2);
             const y = margin + ((maxHeight - imgHeight) / 2);
 
-            console.log('PDF Export Debug:', {
-                pageWidth: pageWidth,
-                pageHeight: pageHeight,
-                margin: margin,
-                maxWidth: maxWidth,
-                maxHeight: maxHeight,
-                croppedCanvasWidth: croppedCanvas.width,
-                croppedCanvasHeight: croppedCanvas.height,
-                imgWidth: imgWidth,
-                imgHeight: imgHeight,
-                x: x,
-                y: y
-            });
-
             // Convert cropped canvas to image data (no padding)
             const imgData = croppedCanvas.toDataURL('image/png');
 
