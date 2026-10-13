@@ -425,6 +425,16 @@ class CircleSizeApp {
         const displayWidth = this.grayscaleCanvas.offsetWidth;
         const displayHeight = this.grayscaleCanvas.offsetHeight;
 
+        // Also check getBoundingClientRect for the actual rendered size
+        const rect = this.grayscaleCanvas.getBoundingClientRect();
+
+        console.log('[app.initializeSelectionCanvas] Debug info:', {
+            offsetDims: `${displayWidth}x${displayHeight}`,
+            boundingRect: `${Math.round(rect.width)}x${Math.round(rect.height)}`,
+            grayscaleCanvasInternal: `${this.grayscaleCanvas.width}x${this.grayscaleCanvas.height}`,
+            grayscaleComputedStyle: getComputedStyle(this.grayscaleCanvas).width + ' x ' + getComputedStyle(this.grayscaleCanvas).height
+        });
+
         // Set selection canvas INTERNAL dimensions to match the displayed size
         // This ensures 1:1 pixel mapping - no stretching or squishing
         this.selectionCanvas.width = displayWidth;
