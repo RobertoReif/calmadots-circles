@@ -1,20 +1,20 @@
 /**
  * PDF Exporter Module
- * Handles PDF export using SimplePdfGenerator (zero dependencies)
- * Note: SimplePdfGenerator must be included in HTML before this module
+ * Handles PDF export using jsPDF library
+ * Note: jsPDF must be included in HTML before this module
  */
 
 class PDFExporter {
     constructor() {
-        this.pdfGeneratorLoaded = typeof SimplePdfGenerator !== 'undefined';
+        this.pdfLibraryLoaded = typeof jsPDF !== 'undefined';
     }
 
     /**
-     * Check if PDF generator is available
+     * Check if PDF library is available
      * @returns {boolean}
      */
     isLibraryLoaded() {
-        return this.pdfGeneratorLoaded;
+        return this.pdfLibraryLoaded;
     }
 
     /**
@@ -34,10 +34,10 @@ class PDFExporter {
         imageMetadata = null
     ) {
         try {
-            if (!this.pdfGeneratorLoaded) {
+            if (!this.pdfLibraryLoaded) {
                 return {
                     success: false,
-                    message: 'SimplePdfGenerator not loaded. Cannot export to PDF.',
+                    message: 'jsPDF library not loaded. Cannot export to PDF.',
                 };
             }
 
@@ -49,26 +49,58 @@ class PDFExporter {
 
             const finalOptions = { ...defaultOptions, ...options };
 
-            // Prepare metadata for PDF
-            const metadata = {
-                filename: originalFilename,
-                timestamp: new Date().toLocaleString(),
-            };
+            // Determine PDF orientation and page size
+            const canvasRatio = canvas.width / canvas.height;
+            const pageOrientation = canvasRatio > 1 ? 'l' : 'p'; // landscape or portrait
 
-            if (imageMetadata) {
-                metadata.imageWidth = imageMetadata.imageWidth;
-                metadata.imageHeight = imageMetadata.imageHeight;
+            // Create PDF with appropriate page size
+            const pdf = new jsPDF({
+                orientation: pageOrientation,
+                unit: 'mm',
+                format: 'a4'
+            });
+
+            // Get page dimensions
+            const pageWidth = pdf.internal.pageSize.getWidth();
+            const pageHeight = pdf.internal.pageSize.getHeight();
+            const margin = 10;
+            const maxWidth = pageWidth - (margin * 2);
+            const maxHeight = pageHeight - (margin * 2);
+
+            // Calculate scaling to fit on page
+            let imgWidth = maxWidth;
+            let imgHeight = (canvas.height / canvas.width) * imgWidth;
+
+            if (imgHeight > maxHeight) {
+                imgHeight = maxHeight;
+                imgWidth = (canvas.width / canvas.height) * imgHeight;
+            }
+
+            // Center on page
+            const x = (pageWidth - imgWidth) / 2;
+            const y = margin;
+
+            // Convert canvas to image data
+            const imgData = canvas.toDataURL('image/png');
+
+            // Add image to PDF
+            pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
+
+            // Add metadata if requested
+            if (finalOptions.includeMetadata && imageMetadata) {
+                pdf.setFontSize(8);
+                let yPos = y + imgHeight + 5;
+                pdf.text(`Image: ${originalFilename}`, margin, yPos);
+                yPos += 3;
+                pdf.text(`Size: ${imageMetadata.imageWidth}×${imageMetadata.imageHeight}px`, margin, yPos);
                 if (imageMetadata.minRadius) {
-                    metadata.minRadius = imageMetadata.minRadius;
-                    metadata.maxRadius = imageMetadata.maxRadius;
+                    yPos += 3;
+                    pdf.text(`Circles: min=${imageMetadata.minRadius}px, max=${imageMetadata.maxRadius}px`, margin, yPos);
                 }
             }
 
-            // Create PDF using SimplePdfGenerator
-            const pdfBlob = SimplePdfGenerator.canvasToPdf(canvas, filename, metadata);
-
-            // Download PDF
-            SimplePdfGenerator.downloadPdf(pdfBlob, filename);
+            // Save PDF
+            pdf.save(filename);
 
             return {
                 success: true,
