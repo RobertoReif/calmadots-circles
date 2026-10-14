@@ -63,8 +63,6 @@ class PDFExporter {
             const imageAspectRatio = imageMetadata.imageWidth / imageMetadata.imageHeight;
             const pageOrientation = imageAspectRatio > 1 ? 'l' : 'p'; // landscape or portrait
 
-            alert('DEBUG ORIENTATION:\nAspect Ratio: ' + imageAspectRatio.toFixed(3) + '\nOrientation: ' + pageOrientation);
-
             // Create PDF with appropriate page size
             const pdf = new this.jsPDFLib({
                 orientation: pageOrientation,
@@ -76,8 +74,6 @@ class PDFExporter {
             const pageWidth = pdf.internal.pageSize.getWidth();
             const pageHeight = pdf.internal.pageSize.getHeight();
             const margin = 12.7; // 0.5 inch margin on all sides (12.7mm = 0.5 inch)
-
-            alert('DEBUG PAGE CREATED:\nOrientation: ' + pageOrientation + '\nPage Width: ' + pageWidth.toFixed(2) + 'mm\nPage Height: ' + pageHeight.toFixed(2) + 'mm');
 
             // Canvas has padding added during rendering to prevent circle clipping
             // We need to crop this padding out to get the actual circle artwork
@@ -132,17 +128,12 @@ class PDFExporter {
             const x = margin + ((maxWidth - imgWidth) / 2);
             const y = margin + ((maxHeight - imgHeight) / 2);
 
-            alert('DEBUG CALC ALL:\nImage Position X: ' + x.toFixed(2) + 'mm\nImage Position Y: ' + y.toFixed(2) + 'mm\nImage Width: ' + imgWidth.toFixed(2) + 'mm\nImage Height: ' + imgHeight.toFixed(2) + 'mm\nPage Width: ' + pageWidth.toFixed(2) + 'mm\nPage Height: ' + pageHeight.toFixed(2) + 'mm\nMargin: ' + margin.toFixed(2) + 'mm');
 
             // Convert cropped canvas to image data (no padding)
             const imgData = croppedCanvas.toDataURL('image/png');
 
-            alert('About to call addImage with:\nFormat: PNG\nX: ' + x.toFixed(2) + 'mm\nY: ' + y.toFixed(2) + 'mm\nWidth: ' + imgWidth.toFixed(2) + 'mm\nHeight: ' + imgHeight.toFixed(2) + 'mm');
-
             // Add image to PDF
             pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
-
-            alert('Image added to PDF');
             console.log('DEBUG 4: PDF internal state after addImage:', {
                 currentPage: pdf.internal.getNumberOfPages(),
                 pageSize: pdf.internal.pageSize.getWidth() + 'x' + pdf.internal.pageSize.getHeight()
