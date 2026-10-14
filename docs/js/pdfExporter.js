@@ -132,13 +132,21 @@ class PDFExporter {
             const x = margin + ((maxWidth - imgWidth) / 2);
             const y = margin + ((maxHeight - imgHeight) / 2);
 
+            alert('BEFORE CANVAS TODATA');
+
             // Convert cropped canvas to image data (no padding)
             const imgData = croppedCanvas.toDataURL('image/png');
 
+            alert('BEFORE POSITIONING - X: ' + x.toFixed(2) + ', Y: ' + y.toFixed(2));
+
             alert('POSITIONING:\nX: ' + x.toFixed(2) + 'mm\nY: ' + y.toFixed(2) + 'mm\nWidth: ' + imgWidth.toFixed(2) + 'mm\nHeight: ' + imgHeight.toFixed(2) + 'mm\n\nPage: ' + pageWidth.toFixed(0) + 'x' + pageHeight.toFixed(0) + 'mm\nMargin: ' + margin.toFixed(2) + 'mm');
+
+            alert('BEFORE ADDIMAGE');
 
             // Add image to PDF at calculated position
             pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
+
+            alert('AFTER ADDIMAGE');
             console.log('DEBUG 4: PDF internal state after addImage:', {
                 currentPage: pdf.internal.getNumberOfPages(),
                 pageSize: pdf.internal.pageSize.getWidth() + 'x' + pdf.internal.pageSize.getHeight()
