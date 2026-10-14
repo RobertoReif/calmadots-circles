@@ -131,14 +131,14 @@ class PDFExporter {
             // Convert cropped canvas to image data (no padding)
             const imgData = croppedCanvas.toDataURL('image/png');
 
-            console.log('About to add image with:', { x, y, imgWidth, imgHeight, pageWidth, pageHeight, margin });
-            console.log('Page info:', pdf.internal.pageSize);
+            console.log('DEBUG 1: About to add image with:', { x, y, imgWidth, imgHeight, pageWidth, pageHeight, margin });
+            console.log('DEBUG 2: Page info:', pdf.internal.pageSize);
 
             // Add image to PDF
             pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
 
-            console.log('Image added to PDF');
-            console.log('PDF internal state after addImage:', {
+            console.log('DEBUG 3: Image added to PDF');
+            console.log('DEBUG 4: PDF internal state after addImage:', {
                 currentPage: pdf.internal.getNumberOfPages(),
                 pageSize: pdf.internal.pageSize.getWidth() + 'x' + pdf.internal.pageSize.getHeight()
             });
