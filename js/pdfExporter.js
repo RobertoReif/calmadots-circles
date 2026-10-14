@@ -110,9 +110,13 @@ class PDFExporter {
                 croppedWidth, croppedHeight                                   // dest width, height
             );
 
+            alert('BEFORE CALC');
+
             // Calculate max available space on page with equal margins
             const maxWidth = pageWidth - (margin * 2);
             const maxHeight = pageHeight - (margin * 2);
+
+            alert('AFTER CALC');
 
             // Calculate scaling to fit on page while preserving aspect ratio
             // Reduce scale slightly (90%) to ensure there's room for centering
