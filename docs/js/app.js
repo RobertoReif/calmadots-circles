@@ -7,14 +7,13 @@ class CircleSizeApp {
     constructor() {
         this.imageProcessor = new ImageProcessor();
         this.visualizer = new CircleVisualizer();
-        this.pdfExporter = new PDFExporter();
+        this.pdfExporter = new PDFLibExporter();
 
         this.currentFilename = 'image';
         this.isProcessing = false;
 
         this.initializeElements();
         this.attachEventListeners();
-        this.loadJsPDFIfNeeded();
     }
 
     /**
@@ -653,43 +652,6 @@ class CircleSizeApp {
      * Load jsPDF library if not already loaded
      * Includes security measures: SRI verification, timeout, and error handling
      */
-    loadJsPDFIfNeeded() {
-        if (typeof jsPDF !== 'undefined') {
-            return; // Already loaded
-        }
-
-        const script = document.createElement('script');
-        script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-
-        // Security: Add Subresource Integrity (SRI) hash for verification
-        script.integrity = 'sha384-7sOc7H+a6yNLaQB6xvT92s9baBWkBnGDr+oZX0qP0t8YCb6H0jGUvV6XL0PxQXAYP';
-        script.crossOrigin = 'anonymous';
-        script.async = true;
-
-        // Add timeout to prevent hanging if CDN is slow or unavailable
-        const timeoutId = setTimeout(() => {
-            console.warn('jsPDF library failed to load within 10 seconds');
-            // Remove the script tag if it hasn't loaded yet
-            if (script.parentNode) {
-                script.parentNode.removeChild(script);
-            }
-        }, 10000);
-
-        script.onload = () => {
-            clearTimeout(timeoutId);
-            console.log('jsPDF library loaded successfully');
-        };
-
-        script.onerror = () => {
-            clearTimeout(timeoutId);
-            console.error('Failed to load jsPDF library from CDN. Check network and CSP settings.');
-            if (script.parentNode) {
-                script.parentNode.removeChild(script);
-            }
-        };
-
-        document.head.appendChild(script);
-    }
 }
 
 // Initialize app when DOM is ready
