@@ -72,17 +72,20 @@ class PDFLibExporter {
             const pngImage = await pdfDoc.embedPng(imageBytes);
 
             // Calculate image dimensions and position
-            const margin = 12.7; // 0.5 inch
+            const margin = 2.54; // 0.1 inch margin on all sides
             const marginPts = margin * mmToPoints;
 
             const maxWidth = (isLandscape ? pageHeightPts : pageWidthPts) - (marginPts * 2);
             const maxHeight = (isLandscape ? pageWidthPts : pageHeightPts) - (marginPts * 2);
 
             // Get the actual canvas dimensions
+            // Account for circle radius and stroke width to ensure circles at edges are not cropped
             const autoScale = 2 * imageMetadata.maxRadius;
             const actualWidth = imageMetadata.imageWidth * autoScale;
             const actualHeight = imageMetadata.imageHeight * autoScale;
-            const radiusMargin = Math.ceil(imageMetadata.maxRadius);
+
+            // Include space for both radius and stroke width at edges
+            const radiusMargin = Math.ceil(imageMetadata.maxRadius + imageMetadata.strokeWidth);
             const croppedWidth = actualWidth + (radiusMargin * 2);
             const croppedHeight = actualHeight + (radiusMargin * 2);
 
