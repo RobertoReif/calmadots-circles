@@ -63,6 +63,8 @@ class PDFExporter {
             const imageAspectRatio = imageMetadata.imageWidth / imageMetadata.imageHeight;
             const pageOrientation = imageAspectRatio > 1 ? 'l' : 'p'; // landscape or portrait
 
+            console.log('DEBUG ORIENTATION:', { imageAspectRatio, pageOrientation });
+
             // Create PDF with appropriate page size
             const pdf = new this.jsPDFLib({
                 orientation: pageOrientation,
@@ -74,6 +76,8 @@ class PDFExporter {
             const pageWidth = pdf.internal.pageSize.getWidth();
             const pageHeight = pdf.internal.pageSize.getHeight();
             const margin = 12.7; // 0.5 inch margin on all sides (12.7mm = 0.5 inch)
+
+            console.log('DEBUG PAGE CREATED:', { pageOrientation, pageWidth, pageHeight, unit: 'mm' });
 
             // Canvas has padding added during rendering to prevent circle clipping
             // We need to crop this padding out to get the actual circle artwork
