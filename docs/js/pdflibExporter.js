@@ -66,8 +66,41 @@ class PDFLibExporter {
                 isLandscape ? pageWidthPts : pageHeightPts
             ]);
 
-            // Get the canvas image as PNG
-            const imageDataUrl = canvas.toDataURL('image/png');
+            // Canvas has padding added during rendering to prevent circle clipping
+            // We need to crop this padding out to get the actual circle artwork
+            const autoScale = 2 * imageMetadata.maxRadius;
+            const maxCircleExtent = (imageMetadata.maxRadius + imageMetadata.strokeWidth) * autoScale;
+            const paddingPixels = Math.ceil(maxCircleExtent) + 50;
+
+            // Create a cropped canvas that includes the circle artwork plus their radii
+            const actualWidth = imageMetadata.imageWidth * autoScale;
+            const actualHeight = imageMetadata.imageHeight * autoScale;
+
+            // Include space for both radius and stroke width at edges
+            const radiusMargin = Math.ceil(imageMetadata.maxRadius + imageMetadata.strokeWidth);
+            const croppedWidth = actualWidth + (radiusMargin * 2);
+            const croppedHeight = actualHeight + (radiusMargin * 2);
+
+            const croppedCanvas = document.createElement('canvas');
+            croppedCanvas.width = croppedWidth;
+            croppedCanvas.height = croppedHeight;
+
+            const croppedCtx = croppedCanvas.getContext('2d');
+            // Fill with white background
+            croppedCtx.fillStyle = '#ffffff';
+            croppedCtx.fillRect(0, 0, croppedWidth, croppedHeight);
+
+            // Draw the circle area from the padded canvas, accounting for circle radius at edges
+            croppedCtx.drawImage(
+                canvas,
+                paddingPixels - radiusMargin, paddingPixels - radiusMargin,  // source x, y
+                croppedWidth, croppedHeight,                                  // source width, height
+                0, 0,                                                         // dest x, y
+                croppedWidth, croppedHeight                                   // dest width, height
+            );
+
+            // Get the cropped canvas image as PNG
+            const imageDataUrl = croppedCanvas.toDataURL('image/png');
             const imageBytes = await fetch(imageDataUrl).then(res => res.arrayBuffer());
             const pngImage = await pdfDoc.embedPng(imageBytes);
 
@@ -77,17 +110,6 @@ class PDFLibExporter {
 
             const maxWidth = (isLandscape ? pageHeightPts : pageWidthPts) - (marginPts * 2);
             const maxHeight = (isLandscape ? pageWidthPts : pageHeightPts) - (marginPts * 2);
-
-            // Get the actual canvas dimensions
-            // Account for circle radius and stroke width to ensure circles at edges are not cropped
-            const autoScale = 2 * imageMetadata.maxRadius;
-            const actualWidth = imageMetadata.imageWidth * autoScale;
-            const actualHeight = imageMetadata.imageHeight * autoScale;
-
-            // Include space for both radius and stroke width at edges
-            const radiusMargin = Math.ceil(imageMetadata.maxRadius + imageMetadata.strokeWidth);
-            const croppedWidth = actualWidth + (radiusMargin * 2);
-            const croppedHeight = actualHeight + (radiusMargin * 2);
 
             // Calculate scaling to fit on page
             let imgWidth = maxWidth * 0.9;
