@@ -81,17 +81,36 @@ class PDFExporter {
             const maxCircleExtent = (imageMetadata.maxRadius + imageMetadata.strokeWidth) * autoScale;
             const paddingPixels = Math.ceil(maxCircleExtent) + 50;
 
-            // Create a cropped canvas that includes the circle artwork plus their radii
-            // Circles at edges extend beyond their centers, so we need to account for that
-            const croppedCanvas = document.createElement('canvas');
+            // Create a FULL PAGE SIZED canvas with margins built in
+            // This will include the white margins around the image
+            const pagePixelsPerMm = 2.83; // 72 DPI / 25.4 mm per inch
+            const pagePixelWidth = Math.round(pageWidth * pagePixelsPerMm);
+            const pagePixelHeight = Math.round(pageHeight * pagePixelsPerMm);
+            const marginPixels = Math.round(margin * pagePixelsPerMm);
+
+            const fullPageCanvas = document.createElement('canvas');
+            fullPageCanvas.width = pagePixelWidth;
+            fullPageCanvas.height = pagePixelHeight;
+
+            const fullPageCtx = fullPageCanvas.getContext('2d');
+            // Fill entire page with white background
+            fullPageCtx.fillStyle = '#ffffff';
+            fullPageCtx.fillRect(0, 0, pagePixelWidth, pagePixelHeight);
+
+            // Calculate where to draw the image in pixel coordinates
+            const imagePixelX = Math.round(x * pagePixelsPerMm);
+            const imagePixelY = Math.round(y * pagePixelsPerMm);
+            const imagePixelWidth = Math.round(imgWidth * pagePixelsPerMm);
+            const imagePixelHeight = Math.round(imgHeight * pagePixelsPerMm);
+
+            // Get the cropped canvas with the circles
             const actualWidth = imageMetadata.imageWidth * autoScale;
             const actualHeight = imageMetadata.imageHeight * autoScale;
-
-            // Include space for circle radius at edges so no circles are cut off
             const radiusMargin = Math.ceil(imageMetadata.maxRadius);
             const croppedWidth = actualWidth + (radiusMargin * 2);
             const croppedHeight = actualHeight + (radiusMargin * 2);
 
+            const croppedCanvas = document.createElement('canvas');
             croppedCanvas.width = croppedWidth;
             croppedCanvas.height = croppedHeight;
 
@@ -100,8 +119,7 @@ class PDFExporter {
             croppedCtx.fillStyle = '#ffffff';
             croppedCtx.fillRect(0, 0, croppedWidth, croppedHeight);
 
-            // Draw the circle area from the padded canvas, accounting for circle radius at edges
-            // Start cropping from (paddingPixels - radiusMargin) to include circle edges
+            // Draw the circle area from the padded canvas
             croppedCtx.drawImage(
                 canvas,
                 paddingPixels - radiusMargin, paddingPixels - radiusMargin,  // source x, y
@@ -110,13 +128,18 @@ class PDFExporter {
                 croppedWidth, croppedHeight                                   // dest width, height
             );
 
-            alert('BEFORE CALC');
+            // Now draw the cropped circles canvas onto the full page canvas at the correct position
+            fullPageCtx.drawImage(
+                croppedCanvas,
+                0, 0,                              // source x, y
+                croppedWidth, croppedHeight,       // source width, height
+                imagePixelX, imagePixelY,          // dest x, y (positioned with margins)
+                imagePixelWidth, imagePixelHeight  // dest width, height (scaled)
+            );
 
             // Calculate max available space on page with equal margins
             const maxWidth = pageWidth - (margin * 2);
             const maxHeight = pageHeight - (margin * 2);
-
-            alert('AFTER CALC');
 
             // Calculate scaling to fit on page while preserving aspect ratio
             // Reduce scale slightly (90%) to ensure there's room for centering
@@ -132,21 +155,13 @@ class PDFExporter {
             const x = margin + ((maxWidth - imgWidth) / 2);
             const y = margin + ((maxHeight - imgHeight) / 2);
 
-            alert('BEFORE CANVAS TODATA');
+            // Convert the full page canvas (with positioned image) to image data
+            const imgData = fullPageCanvas.toDataURL('image/png');
 
-            // Convert cropped canvas to image data (no padding)
-            const imgData = croppedCanvas.toDataURL('image/png');
+            alert('FULL PAGE CANVAS:\nPage Canvas Size: ' + pagePixelWidth + 'x' + pagePixelHeight + ' pixels');
 
-            alert('BEFORE POSITIONING - X: ' + x.toFixed(2) + ', Y: ' + y.toFixed(2));
-
-            alert('POSITIONING:\nX: ' + x.toFixed(2) + 'mm\nY: ' + y.toFixed(2) + 'mm\nWidth: ' + imgWidth.toFixed(2) + 'mm\nHeight: ' + imgHeight.toFixed(2) + 'mm\n\nPage: ' + pageWidth.toFixed(0) + 'x' + pageHeight.toFixed(0) + 'mm\nMargin: ' + margin.toFixed(2) + 'mm');
-
-            alert('BEFORE ADDIMAGE');
-
-            // Add image to PDF at calculated position
-            pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
-
-            alert('AFTER ADDIMAGE');
+            // Add the full page canvas image to PDF at 0,0 (entire page covers full page)
+            pdf.addImage(imgData, 'PNG', 0, 0, pageWidth, pageHeight);
             console.log('DEBUG 4: PDF internal state after addImage:', {
                 currentPage: pdf.internal.getNumberOfPages(),
                 pageSize: pdf.internal.pageSize.getWidth() + 'x' + pdf.internal.pageSize.getHeight()
