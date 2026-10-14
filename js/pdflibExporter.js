@@ -111,7 +111,7 @@ class PDFLibExporter {
             const maxWidth = (isLandscape ? pageHeightPts : pageWidthPts) - (marginPts * 2);
             const maxHeight = (isLandscape ? pageWidthPts : pageHeightPts) - (marginPts * 2);
 
-            // Calculate scaling to fit on page
+            // Calculate scaling to fit on page (all values in points)
             let imgWidth = maxWidth * 0.9;
             let imgHeight = (croppedHeight / croppedWidth) * imgWidth;
 
@@ -120,19 +120,9 @@ class PDFLibExporter {
                 imgWidth = (croppedWidth / croppedHeight) * imgHeight;
             }
 
-            // Convert points back to actual dimension for image
-            const imgWidthPts = imgWidth * mmToPoints;
-            const imgHeightPts = imgHeight * mmToPoints;
-
-            // Calculate centered position
-            const xPts = marginPts + ((maxWidth - (imgWidth * mmToPoints)) / 2);
-            const yPts = marginPts + ((maxHeight - (imgHeight * mmToPoints)) / 2);
-
-            console.log('PDFLib positioning:', {
-                pageWidthPts, pageHeightPts,
-                imgWidthPts, imgHeightPts,
-                xPts, yPts
-            });
+            // Calculate centered position (in points)
+            const xPts = marginPts + ((maxWidth - imgWidth) / 2);
+            const yPts = marginPts + ((maxHeight - imgHeight) / 2);
 
             // Draw white background
             page.drawRectangle({
@@ -146,13 +136,13 @@ class PDFLibExporter {
             // Draw the image at the calculated position
             // Note: PDFLib uses bottom-left origin, so we need to adjust Y
             const actualPageHeight = isLandscape ? pageWidthPts : pageHeightPts;
-            const yFromBottom = actualPageHeight - yPts - imgHeightPts;
+            const yFromBottom = actualPageHeight - yPts - imgHeight;
 
             page.drawImage(pngImage, {
                 x: xPts,
                 y: yFromBottom,
-                width: imgWidthPts,
-                height: imgHeightPts,
+                width: imgWidth,
+                height: imgHeight,
             });
 
             // Save and download
