@@ -114,26 +114,28 @@ class PDFExporter {
             const maxWidth = pageWidth - (margin * 2);
             const maxHeight = pageHeight - (margin * 2);
 
-            console.log('DEBUG CALC 1:', { pageWidth, pageHeight, margin, maxWidth, maxHeight });
-
             // Calculate scaling to fit on page while preserving aspect ratio
             // Reduce scale slightly (90%) to ensure there's room for centering
             let imgWidth = maxWidth * 0.9;
             let imgHeight = (croppedCanvas.height / croppedCanvas.width) * imgWidth;
 
-            console.log('DEBUG CALC 2 (after initial scaling):', { imgWidth, imgHeight, maxWidth90: maxWidth * 0.9, maxHeight90: maxHeight * 0.9 });
-
             if (imgHeight > maxHeight * 0.9) {
                 imgHeight = maxHeight * 0.9;
                 imgWidth = (croppedCanvas.width / croppedCanvas.height) * imgHeight;
-                console.log('DEBUG CALC 3 (height constrained):', { imgWidth, imgHeight });
             }
 
             // Center image perfectly on page with equal margins on all 4 sides
             const x = margin + ((maxWidth - imgWidth) / 2);
             const y = margin + ((maxHeight - imgHeight) / 2);
 
-            console.log('DEBUG CALC 4 (centering):', { x, y, calculatedX: margin + ((maxWidth - imgWidth) / 2), calculatedY: margin + ((maxHeight - imgHeight) / 2) });
+            console.log('DEBUG CALC ALL:', {
+                pageWidth, pageHeight, margin,
+                maxWidth, maxHeight,
+                croppedWidth: croppedCanvas.width,
+                croppedHeight: croppedCanvas.height,
+                imgWidth, imgHeight,
+                x, y
+            });
 
             // Convert cropped canvas to image data (no padding)
             const imgData = croppedCanvas.toDataURL('image/png');
@@ -171,6 +173,7 @@ class PDFExporter {
                 message: `PDF exported successfully: ${filename}`,
             };
         } catch (error) {
+            console.error('PDF export error:', error);
             return {
                 success: false,
                 message: `PDF export failed: ${error.message}`,
