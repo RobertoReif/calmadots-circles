@@ -11,6 +11,7 @@ class CircleVisualizer {
             strokeWidth: 2,
             spacing: 0,
         };
+        this.renderToken = 0; // Incremented per render; a stale token cancels an in-flight render
     }
 
     /**
@@ -26,206 +27,137 @@ class CircleVisualizer {
      * Formula: normalized_darkness = (255 - pixel_value) / 255
      *          radius = min_radius + (normalized_darkness * (max_radius - min_radius))
      * @param {number} pixelValue - Grayscale value (0-255)
+     * @param {object} config - Config to use (defaults to current config)
      * @returns {{radius: number, strokeWidth: number}}
      */
-    getCircleProperties(pixelValue) {
+    getCircleProperties(pixelValue, config = this.config) {
         // Invert: black (0) → 1, white (255) → 0
         const normalizedDarkness = (255 - pixelValue) / 255;
 
         // Interpolate between min and max radius
         const radius =
-            this.config.minRadius +
-            normalizedDarkness * (this.config.maxRadius - this.config.minRadius);
+            config.minRadius +
+            normalizedDarkness * (config.maxRadius - config.minRadius);
 
-        // Adaptive stroke width (smaller circles use 1px, larger use more)
-        const strokeWidth = Math.max(1, Math.ceil(normalizedDarkness * this.config.strokeWidth));
+        // Adaptive stroke width (lighter circles thinner, darkest use the full stroke width)
+        const strokeWidth = Math.max(1, normalizedDarkness * config.strokeWidth);
 
         return { radius, strokeWidth };
     }
 
     /**
+     * Get layout geometry for an image of the given size
+     * Circle centers sit on a grid with pitch 2 * maxRadius; the canvas fits the grid
+     * plus room for the largest circle (radius + half its stroke) on every side.
+     * @param {number} width - Image width in pixels
+     * @param {number} height - Image height in pixels
+     * @param {object} config - Config to use (defaults to current config)
+     * @returns {{pitch: number, edgeMargin: number, canvasWidth: number, canvasHeight: number}}
+     */
+    getLayout(width, height, config = this.config) {
+        const pitch = 2 * config.maxRadius;
+        const edgeMargin = Math.ceil(config.maxRadius + Math.max(1, config.strokeWidth) / 2) + 1;
+        return {
+            pitch,
+            edgeMargin,
+            canvasWidth: (width - 1) * pitch + edgeMargin * 2,
+            canvasHeight: (height - 1) * pitch + edgeMargin * 2,
+        };
+    }
+
+    /**
      * Render circles on canvas from grayscale data
-     * Uses chunked rendering with requestAnimationFrame to prevent UI blocking
+     * Draws off-screen and copies to the target canvas only when complete, so a
+     * render cancelled by a newer one never leaves a partial image behind.
      * @param {HTMLCanvasElement} canvas - Canvas element
      * @param {ImageProcessor} imageProcessor - ImageProcessor instance with grayscale data
      * @param {function} onProgress - Callback for progress updates (0-100)
-     * @param {number} userScale - Optional user-specified scale factor (overrides auto-scaling)
      * @param {boolean} fillCircles - Whether to fill circles (true) or stroke them (false)
-     * @returns {Promise} Resolves when rendering is complete
+     * @returns {Promise<boolean>} Resolves true when complete, false if cancelled by a newer render
      */
-    async renderCircles(canvas, imageProcessor, onProgress = null, userScale = null, fillCircles = false) {
+    renderCircles(canvas, imageProcessor, onProgress = null, fillCircles = false) {
+        const token = ++this.renderToken;
+
+        // Snapshot inputs so later config or image changes can't affect this render
+        const config = { ...this.config };
         const { width, height } = imageProcessor.getDimensions();
+        const grayscale = imageProcessor.grayscaleData;
+        const { pitch, edgeMargin, canvasWidth, canvasHeight } = this.getLayout(width, height, config);
 
-        // Auto-calculate scale to prevent overlap
-        // Minimum distance between circle centers: 2 * maxRadius
-        const minDistanceBetweenCenters = 2 * this.config.maxRadius;
-        const autoScale = userScale || minDistanceBetweenCenters;
+        const offscreen = document.createElement('canvas');
+        offscreen.width = canvasWidth;
+        offscreen.height = canvasHeight;
 
-        // Size the canvas to exactly fit the artwork: centers span (n-1) * autoScale,
-        // plus room for the largest circle (radius + half its stroke) on every side.
-        // Stroke widths are rounded up per circle, so use the rounded-up max stroke.
-        const edgeMargin = Math.ceil(this.config.maxRadius + Math.ceil(this.config.strokeWidth) / 2) + 1;
-        const scaledWidth = (width - 1) * autoScale;
-        const scaledHeight = (height - 1) * autoScale;
-
-        console.log('[renderCircles] Starting render:', {
-            originalDimensions: `${width}x${height}`,
-            autoScale,
-            scaledDimensions: `${scaledWidth}x${scaledHeight}`,
-            edgeMargin,
-            config: this.config
-        });
-
-        canvas.width = scaledWidth + (edgeMargin * 2);
-        canvas.height = scaledHeight + (edgeMargin * 2);
-
-        console.log('[renderCircles] Canvas dimensions after setting:', {
-            canvasWidth: canvas.width,
-            canvasHeight: canvas.height,
-            canvasClientWidth: canvas.clientWidth,
-            canvasClientHeight: canvas.clientHeight,
-            canvasDisplay: window.getComputedStyle(canvas).display,
-            canvasVisibility: window.getComputedStyle(canvas).visibility
-        });
-
-        const ctx = canvas.getContext('2d');
+        const ctx = offscreen.getContext('2d');
         if (!ctx) {
-            throw new Error('Could not get canvas context');
+            return Promise.reject(new Error('Could not get canvas context'));
         }
 
-        // Set white background (fill entire canvas including padding)
+        // Set white background
         ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        console.log('[renderCircles] White background filled');
+        ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+        ctx.fillStyle = '#000000';
+        ctx.strokeStyle = '#000000';
 
-        // Sample every pixel (pixelStep = 1) for full coverage
-        // spacing adds additional gaps if desired (0 = every pixel)
-        const pixelStep = 1 + this.config.spacing;
+        // Sample every (spacing + 1)th pixel
+        const pixelStep = 1 + config.spacing;
+        const totalRows = Math.ceil(height / pixelStep);
+        let processedRows = 0;
 
-        // Total pixels to process (for progress)
-        const totalPixels = Math.ceil(width / pixelStep) * Math.ceil(height / pixelStep);
-        let processedPixels = 0;
-        let circlesDrawn = 0;
-
-        // Render circles in chunks to avoid blocking the UI
-        // Each chunk processes up to CHUNK_HEIGHT rows of pixels
+        // Render circles in chunks of rows to avoid blocking the UI
         const CHUNK_HEIGHT = 50;
         let currentY = 0;
 
         return new Promise((resolve) => {
             const renderChunk = () => {
+                if (token !== this.renderToken) {
+                    resolve(false);
+                    return;
+                }
+
                 const chunkEndY = Math.min(currentY + CHUNK_HEIGHT * pixelStep, height);
 
-                // Process one chunk of rows
                 for (let y = currentY; y < chunkEndY; y += pixelStep) {
                     for (let x = 0; x < width; x += pixelStep) {
-                        const pixelValue = imageProcessor.getPixelGrayscale(x, y);
-                        const { radius, strokeWidth } = this.getCircleProperties(pixelValue);
+                        const pixelValue = grayscale[(y * width + x) * 4];
+                        const { radius, strokeWidth } = this.getCircleProperties(pixelValue, config);
 
-                        // Skip very small circles (white pixels) if radius < 0.5
+                        // Skip circles too small to see
                         if (radius < 0.5) {
-                            processedPixels++;
                             continue;
                         }
 
-                        // Scale position only (not radius)
-                        // This ensures circles are spaced far enough apart to not overlap
-                        // while keeping their relative size differences
-                        // Offset by edge margin so edge circles are not clipped
-                        const scaledX = x * autoScale + edgeMargin;
-                        const scaledY = y * autoScale + edgeMargin;
-
-                        // Draw circle at scaled position with original radius
+                        // Scale position only (not radius) so circles keep their relative sizes
                         ctx.beginPath();
-                        ctx.arc(scaledX, scaledY, radius, 0, 2 * Math.PI);
+                        ctx.arc(x * pitch + edgeMargin, y * pitch + edgeMargin, radius, 0, 2 * Math.PI);
 
                         if (fillCircles) {
-                            // Fill circle with black
-                            ctx.fillStyle = '#000000';
                             ctx.fill();
                         } else {
-                            // Stroke circle (hollow)
-                            ctx.strokeStyle = '#000000';
                             ctx.lineWidth = strokeWidth;
                             ctx.stroke();
                         }
-
-                        circlesDrawn++;
-                        processedPixels++;
                     }
+                    processedRows++;
                 }
 
-                // Update progress
                 if (onProgress) {
-                    const progress = Math.min(100, Math.round((processedPixels / totalPixels) * 100));
-                    onProgress(progress);
+                    onProgress(Math.min(100, Math.round((processedRows / totalRows) * 100)));
                 }
 
-                // Check if we're done
                 if (chunkEndY < height) {
                     currentY = chunkEndY;
-                    // Yield to browser using requestAnimationFrame
                     requestAnimationFrame(renderChunk);
                 } else {
-                    // Rendering complete
-                    console.log('[renderCircles] Rendering complete:', {
-                        circlesDrawn,
-                        processedPixels,
-                        totalPixels,
-                        canvasSize: `${canvas.width}x${canvas.height}`
-                    });
-                    if (onProgress) {
-                        onProgress(100);
-                    }
-                    resolve();
+                    canvas.width = canvasWidth;
+                    canvas.height = canvasHeight;
+                    canvas.getContext('2d').drawImage(offscreen, 0, 0);
+                    resolve(true);
                 }
             };
 
-            // Start the chunked rendering
-            console.log('[renderCircles] Starting chunked rendering with CHUNK_HEIGHT=50');
             requestAnimationFrame(renderChunk);
         });
-    }
-
-    /**
-     * Get canvas as image data URL (PNG)
-     * @param {HTMLCanvasElement} canvas - Canvas element
-     * @returns {string} Data URL (PNG format)
-     */
-    getCanvasDataURL(canvas) {
-        return canvas.toDataURL('image/png');
-    }
-
-    /**
-     * Download canvas as image file
-     * @param {HTMLCanvasElement} canvas - Canvas element
-     * @param {string} filename - Filename for download
-     */
-    downloadCanvasAsImage(canvas, filename = 'circlesize.png') {
-        const link = document.createElement('a');
-        link.href = this.getCanvasDataURL(canvas);
-        link.download = filename;
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
-    }
-
-    /**
-     * Get canvas at higher resolution (for PDF export)
-     * @param {HTMLCanvasElement} sourceCanvas - Source canvas
-     * @param {number} scale - Scale factor (e.g., 2 for 2x resolution)
-     * @returns {HTMLCanvasElement} High-resolution canvas
-     */
-    getHighResolutionCanvas(sourceCanvas, scale = 2) {
-        const scaledCanvas = document.createElement('canvas');
-        scaledCanvas.width = sourceCanvas.width * scale;
-        scaledCanvas.height = sourceCanvas.height * scale;
-
-        const ctx = scaledCanvas.getContext('2d');
-        ctx.scale(scale, scale);
-        ctx.drawImage(sourceCanvas, 0, 0);
-
-        return scaledCanvas;
     }
 }
 

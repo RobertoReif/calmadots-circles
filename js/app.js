@@ -10,7 +10,6 @@ class CircleSizeApp {
         this.pdfExporter = new PDFLibExporter();
 
         this.currentFilename = 'image';
-        this.isProcessing = false;
 
         this.initializeElements();
         this.attachEventListeners();
@@ -221,7 +220,6 @@ class CircleSizeApp {
             endY: y,
             isSelecting: true
         };
-        console.log('[app.handleSelectionStart] Selection started at:', x, y, 'Scale:', scaleX, scaleY);
     }
 
     /**
@@ -284,7 +282,6 @@ class CircleSizeApp {
     handleSelectionEnd(event) {
         if (!this.cropSelection) return;
         this.cropSelection.isSelecting = false;
-        console.log('[app.handleSelectionEnd] Selection ended:', this.cropSelection);
     }
 
     /**
@@ -357,35 +354,10 @@ class CircleSizeApp {
                 height: Math.round((endY - startY) * scaleY)
             };
 
-            console.log('[app.handleCrop] Crop area:', customCropArea, 'Image dims:', this.imageProcessor.currentWidth, 'x', this.imageProcessor.currentHeight);
-
-            // Perform the crop with the selected region
-            this.imageProcessor.cropAndRescale(orientation, customCropArea).then(async (result) => {
-                // Update preview
-                this.imageProcessor.convertToGrayscale();
-                this.imageProcessor.drawGrayscalePreview(this.grayscaleCanvas);
-
-                // Clear selection canvas to remove selection rectangle
-                const ctx = this.selectionCanvas.getContext('2d');
-                if (ctx) {
-                    ctx.clearRect(0, 0, this.selectionCanvas.width, this.selectionCanvas.height);
-                }
-                this.cropSelection = null;
-
-                // Reinitialize selection canvas for new image dimensions
-                this.initializeSelectionCanvas();
-
-                // Resize to default long edge pixels before rendering circles
-                await this.imageProcessor.resizeByLongEdge(this.longEdgePixels);
-                await this.imageProcessor.convertToGrayscale();
-
-                // Show success and render circles
-                this.showMessage(this.cropStatus, result.message, 'success');
-                await this.renderCircles();
-            }).catch((error) => {
-                this.showMessage(this.cropStatus, `Crop error: ${error.message}`, 'error');
-            });
-
+            const result = this.imageProcessor.crop(orientation, customCropArea);
+            this.showMessage(this.cropStatus, result.message, 'success');
+            this.prepareImage();
+            this.renderCircles();
         } catch (error) {
             this.showMessage(this.cropStatus, `Crop error: ${error.message}`, 'error');
         }
@@ -398,13 +370,7 @@ class CircleSizeApp {
         try {
             this.showMessage(this.uploadStatus, 'Converting to grayscale...', 'info');
 
-            // Downsample to the long-edge setting before rendering; full-res stays available for cropping
-            await this.imageProcessor.resizeByLongEdge(this.longEdgePixels);
-            await this.imageProcessor.convertToGrayscale();
-            this.imageProcessor.drawGrayscalePreview(this.grayscaleCanvas);
-
-            // Initialize selection canvas to overlay on grayscale canvas
-            this.initializeSelectionCanvas();
+            this.prepareImage();
 
             this.showMessage(this.uploadStatus, 'Image ready!', 'success');
 
@@ -419,6 +385,55 @@ class CircleSizeApp {
         } catch (error) {
             this.showMessage(this.uploadStatus, `Error: ${error.message}`, 'error');
         }
+    }
+
+    /**
+     * Downsample the source to the long-edge setting (full-res stays available for cropping),
+     * then refresh the grayscale preview and crop overlay
+     */
+    prepareImage() {
+        this.fitLongEdgeToCanvasLimit();
+        this.imageProcessor.resizeByLongEdge(this.longEdgePixels);
+        this.imageProcessor.drawGrayscalePreview(this.grayscaleCanvas);
+        this.initializeSelectionCanvas();
+    }
+
+    /**
+     * Lower the long edge if the circle canvas would exceed the browser's canvas limit
+     * (iOS Safari: ~16.7M pixels; other browsers: 32767px per side, ~268M pixels)
+     * @returns {boolean} True if the long edge was lowered
+     */
+    fitLongEdgeToCanvasLimit() {
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        const maxArea = isIOS ? 16777216 : 268435456;
+        const maxSide = isIOS ? 16384 : 32767;
+
+        const { originalWidth, originalHeight } = this.imageProcessor;
+        const longest = Math.max(originalWidth, originalHeight);
+        const fits = (longEdge) => {
+            const width = Math.max(1, Math.round(originalWidth * longEdge / longest));
+            const height = Math.max(1, Math.round(originalHeight * longEdge / longest));
+            const { canvasWidth, canvasHeight } = this.visualizer.getLayout(width, height);
+            return canvasWidth <= maxSide && canvasHeight <= maxSide && canvasWidth * canvasHeight <= maxArea;
+        };
+
+        const requested = this.longEdgePixels;
+        let longEdge = requested;
+        while (longEdge > 10 && !fits(longEdge)) {
+            longEdge -= 5;
+        }
+        if (longEdge === requested) return false;
+
+        this.longEdgePixels = longEdge;
+        this.longEdgeSlider.value = longEdge;
+        this.longEdgeValue.textContent = `${longEdge}px`;
+        this.showMessage(
+            this.cropStatus,
+            `Long edge lowered from ${requested}px to ${longEdge}px to fit this browser's canvas size limit.`,
+            'info'
+        );
+        return true;
     }
 
     /**
@@ -459,12 +474,6 @@ class CircleSizeApp {
 
         // Clear any previous selection
         this.cropSelection = null;
-
-        console.log('[app.initializeSelectionCanvas] Canvas initialized:', {
-            grayscaleCanvasInternal: `${grayscaleWidth}x${grayscaleHeight}`,
-            calculatedDisplay: `${displayWidth}x${displayHeight}`,
-            selectionCanvasInternal: `${this.selectionCanvas.width}x${this.selectionCanvas.height}`
-        });
     }
 
 
@@ -494,7 +503,11 @@ class CircleSizeApp {
             spacing,
         });
 
-        // Re-render circles
+        // A larger max radius grows the canvas; shrink the long edge if it no longer fits
+        if (this.imageProcessor.sourceImage && this.fitLongEdgeToCanvasLimit()) {
+            this.prepareImage();
+        }
+
         await this.renderCircles();
     }
 
@@ -514,40 +527,28 @@ class CircleSizeApp {
      * Render circle visualization
      */
     async renderCircles() {
-        if (this.isProcessing) return;
+        if (!this.imageProcessor.grayscaleData) return;
 
-        this.isProcessing = true;
         this.processingStatus.style.display = 'block';
         this.progressFill.style.width = '0%';
 
-        console.log('[app.renderCircles] Starting visualization render');
-
         try {
-            const onProgress = (progress) => {
-                console.log('[app.renderCircles] Progress:', progress + '%');
-                this.progressFill.style.width = `${progress}%`;
-            };
-
-            console.log('[app.renderCircles] Calling visualizer.renderCircles()');
-            await this.visualizer.renderCircles(
+            // A newer render cancels this one (completed === false); it then owns the status UI
+            const completed = await this.visualizer.renderCircles(
                 this.circleCanvas,
                 this.imageProcessor,
-                onProgress,
-                null,
+                (progress) => { this.progressFill.style.width = `${progress}%`; },
                 this.fillCircles
             );
-            console.log('[app.renderCircles] Visualization rendering complete');
-
-            this.processingStatus.style.display = 'none';
+            if (completed) {
+                this.processingStatus.style.display = 'none';
+            }
         } catch (error) {
-            console.error('[app.renderCircles] Error:', error);
             this.showMessage(
                 this.processingStatus,
                 `Rendering error: ${error.message}`,
                 'error'
             );
-        } finally {
-            this.isProcessing = false;
         }
     }
 
@@ -556,18 +557,7 @@ class CircleSizeApp {
      */
     async handleLongEdgeChange() {
         try {
-            this.showMessage(this.processingStatus, 'Resizing image...', 'info');
-            this.processingStatus.style.display = 'block';
-
-            // Resize the image based on long edge pixels
-            await this.imageProcessor.resizeByLongEdge(this.longEdgePixels);
-
-            // Update grayscale preview
-            await this.imageProcessor.convertToGrayscale();
-            this.imageProcessor.drawGrayscalePreview(this.grayscaleCanvas);
-            this.initializeSelectionCanvas();
-
-            // Re-render circles with new dimensions
+            this.prepareImage();
             await this.renderCircles();
         } catch (error) {
             this.showMessage(this.processingStatus, `Resize error: ${error.message}`, 'error');

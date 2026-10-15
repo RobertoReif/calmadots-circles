@@ -5,8 +5,7 @@
 
 class ImageProcessor {
     constructor() {
-        this.image = null;
-        this.originalCroppedImage = null; // Full-res source (uploaded image, or latest crop of it) before any resizing
+        this.sourceImage = null; // Full-res source (uploaded image, or latest crop of it) before any resizing
         this.grayscaleData = null;
         this.originalWidth = 0;
         this.originalHeight = 0;
@@ -54,8 +53,7 @@ class ImageProcessor {
                 }
 
                 // Validation passed, store image data
-                this.image = img;
-                this.originalCroppedImage = img;
+                this.sourceImage = img;
                 this.originalWidth = img.width;
                 this.originalHeight = img.height;
                 this.currentWidth = img.width;
@@ -102,13 +100,14 @@ class ImageProcessor {
     }
 
     /**
-     * Crop image to specific aspect ratio (without rescaling)
-     * @param {string} orientation - 'portrait' (11:8.5) or 'landscape' (8.5:11)
-     * @param {object} customCropArea - Optional custom crop area {x, y, width, height}
+     * Crop the full-res source to a US Letter aspect ratio (8.5:11 or 11:8.5)
+     * @param {string} orientation - 'portrait' or 'landscape'
+     * @param {object} customCropArea - Optional selection {x, y, width, height} in source coordinates
+     * @returns {{message: string, width: number, height: number}}
      * @throws {Error} If image not loaded or orientation invalid
      */
-    cropAndRescale(orientation, customCropArea = null) {
-        if (!this.image) {
+    crop(orientation, customCropArea = null) {
+        if (!this.sourceImage) {
             throw new Error('No image loaded');
         }
 
@@ -155,10 +154,9 @@ class ImageProcessor {
                 cropY = selectionY + Math.round((selectionHeight - cropHeight) / 2);
             }
         } else {
-            // Original center crop logic when no custom area
+            // Center crop when no custom area
             const currentRatio = originalWidth / originalHeight;
 
-            // Calculate crop dimensions (center crop)
             if (currentRatio > targetRatio) {
                 // Image is too wide, crop width
                 cropHeight = originalHeight;
@@ -169,12 +167,15 @@ class ImageProcessor {
                 cropHeight = Math.round(originalWidth / targetRatio);
             }
 
-            // Calculate center crop position
             cropX = Math.round((originalWidth - cropWidth) / 2);
             cropY = Math.round((originalHeight - cropHeight) / 2);
         }
 
-        // Create canvas for cropped image
+        if (cropWidth < 1 || cropHeight < 1) {
+            throw new Error('Crop selection is too small');
+        }
+
+        // Draw cropped region from the full-res source; the canvas becomes the new source
         const cropCanvas = document.createElement('canvas');
         cropCanvas.width = cropWidth;
         cropCanvas.height = cropHeight;
@@ -184,164 +185,68 @@ class ImageProcessor {
             throw new Error('Could not get canvas context');
         }
 
-        // Draw cropped region from the full-res source (this.image may be downsampled)
         ctx.drawImage(
-            this.originalCroppedImage || this.image,
+            this.sourceImage,
             cropX, cropY, cropWidth, cropHeight,
             0, 0, cropWidth, cropHeight
         );
 
-        // Rescale so long edge = 100px
-        const longEdge = Math.max(cropWidth, cropHeight);
-        const scale = 100 / longEdge;
-        const newWidth = Math.round(cropWidth * scale);
-        const newHeight = Math.round(cropHeight * scale);
+        this.sourceImage = cropCanvas;
+        this.originalWidth = cropWidth;
+        this.originalHeight = cropHeight;
 
-        // Create canvas for rescaled image
-        const rescaleCanvas = document.createElement('canvas');
-        rescaleCanvas.width = newWidth;
-        rescaleCanvas.height = newHeight;
-
-        const rescaleCtx = rescaleCanvas.getContext('2d');
-        if (!rescaleCtx) {
-            throw new Error('Could not get canvas context for rescaling');
-        }
-
-        // Create new image from cropped canvas (without rescaling)
-        const newImg = new Image();
-        newImg.src = cropCanvas.toDataURL();
-
-        // Wait for image to load
-        return new Promise((resolve) => {
-            newImg.onload = () => {
-                // Store the original high-res cropped image for later resizing
-                this.originalCroppedImage = newImg;
-
-                // Update internal state with cropped image
-                this.image = newImg;
-                this.currentWidth = cropWidth;
-                this.currentHeight = cropHeight;
-                // Keep original dimensions for later resizing
-                this.originalWidth = cropWidth;
-                this.originalHeight = cropHeight;
-
-                resolve({
-                    success: true,
-                    message: `Cropped to ${orientation} (${cropWidth}×${cropHeight}px)`,
-                    width: cropWidth,
-                    height: cropHeight
-                });
-            };
-
-            newImg.onerror = () => {
-                throw new Error('Failed to process cropped image');
-            };
-        });
+        return {
+            message: `Cropped to ${orientation} (${cropWidth}×${cropHeight}px)`,
+            width: cropWidth,
+            height: cropHeight
+        };
     }
 
     /**
-     * Resize image based on long edge pixel count (preserving aspect ratio)
+     * Downsample the source so its long edge is longEdgePixels (preserving aspect ratio)
+     * and compute grayscale data at that size
      * @param {number} longEdgePixels - Target number of pixels for the long edge
-     * @returns {Promise<object>} Resolves with success message and new dimensions
+     * @returns {{width: number, height: number}} New dimensions
      */
-    async resizeByLongEdge(longEdgePixels) {
-        if (!this.image) {
+    resizeByLongEdge(longEdgePixels) {
+        if (!this.sourceImage) {
             throw new Error('No image loaded');
         }
 
-        // Use original cropped image for resizing to maintain quality
-        const sourceImage = this.originalCroppedImage || this.image;
-        const sourceWidth = this.originalWidth;
-        const sourceHeight = this.originalHeight;
+        const scale = longEdgePixels / Math.max(this.originalWidth, this.originalHeight);
+        const width = Math.max(1, Math.round(this.originalWidth * scale));
+        const height = Math.max(1, Math.round(this.originalHeight * scale));
 
-        const sourceLongEdge = Math.max(sourceWidth, sourceHeight);
-        const scale = longEdgePixels / sourceLongEdge;
-        const newWidth = Math.round(sourceWidth * scale);
-        const newHeight = Math.round(sourceHeight * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
 
-        // Create canvas for resized image
-        const resizeCanvas = document.createElement('canvas');
-        resizeCanvas.width = newWidth;
-        resizeCanvas.height = newHeight;
-
-        const ctx = resizeCanvas.getContext('2d');
+        const ctx = canvas.getContext('2d');
         if (!ctx) {
             throw new Error('Could not get canvas context for resizing');
         }
 
-        ctx.drawImage(sourceImage, 0, 0, newWidth, newHeight);
+        // Composite onto white so transparent pixels read as white, not black
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(this.sourceImage, 0, 0, width, height);
 
-        // Create new image from resized canvas
-        const newImg = new Image();
-        newImg.src = resizeCanvas.toDataURL();
+        const data = ctx.getImageData(0, 0, width, height).data;
 
-        return new Promise((resolve) => {
-            newImg.onload = () => {
-                // Update internal state with resized image
-                this.image = newImg;
-                this.currentWidth = newWidth;
-                this.currentHeight = newHeight;
-
-                resolve({
-                    success: true,
-                    message: `Resized to ${newWidth}×${newHeight}px (${longEdgePixels}px long edge)`,
-                    width: newWidth,
-                    height: newHeight
-                });
-            };
-
-            newImg.onerror = () => {
-                throw new Error('Failed to process resized image');
-            };
-        });
-    }
-
-    /**
-     * Convert image to grayscale
-     * @returns {Promise<Uint8ClampedArray>} Grayscale pixel data
-     */
-    async convertToGrayscale() {
-        if (!this.image) {
-            throw new Error('No image loaded');
+        // Convert to grayscale (RGBA → Gray)
+        // Formula: gray = 0.299*R + 0.587*G + 0.114*B
+        for (let i = 0; i < data.length; i += 4) {
+            const gray = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+            data[i] = gray;     // R
+            data[i + 1] = gray; // G
+            data[i + 2] = gray; // B
         }
 
-        return new Promise((resolve) => {
-            // Create hidden canvas
-            const canvas = document.createElement('canvas');
-            canvas.width = this.currentWidth;
-            canvas.height = this.currentHeight;
+        this.grayscaleData = data;
+        this.currentWidth = width;
+        this.currentHeight = height;
 
-            const ctx = canvas.getContext('2d');
-            if (!ctx) {
-                throw new Error('Could not get canvas context');
-            }
-
-            // Draw resized image
-            ctx.drawImage(this.image, 0, 0, this.currentWidth, this.currentHeight);
-
-            // Get image data
-            const imageData = ctx.getImageData(0, 0, this.currentWidth, this.currentHeight);
-            const data = imageData.data;
-
-            // Convert to grayscale (RGBA → Gray)
-            // Formula: gray = 0.299*R + 0.587*G + 0.114*B
-            for (let i = 0; i < data.length; i += 4) {
-                const r = data[i];
-                const g = data[i + 1];
-                const b = data[i + 2];
-                const gray = Math.round(0.299 * r + 0.587 * g + 0.114 * b);
-
-                data[i] = gray;     // R
-                data[i + 1] = gray; // G
-                data[i + 2] = gray; // B
-                // data[i + 3] = alpha (unchanged)
-            }
-
-            // Store grayscale data
-            this.grayscaleData = data;
-
-            resolve(data);
-        });
+        return { width, height };
     }
 
     /**
@@ -364,26 +269,6 @@ class ImageProcessor {
         const imageData = ctx.createImageData(this.currentWidth, this.currentHeight);
         imageData.data.set(this.grayscaleData);
         ctx.putImageData(imageData, 0, 0);
-    }
-
-    /**
-     * Resize image to new width (preserving aspect ratio)
-     * @param {number} newWidth - New width in pixels
-     */
-    resizeImage(newWidth) {
-        if (!this.image) {
-            throw new Error('No image loaded');
-        }
-
-        // Calculate new height (preserve aspect ratio)
-        const aspectRatio = this.originalHeight / this.originalWidth;
-        const newHeight = Math.round(newWidth * aspectRatio);
-
-        this.currentWidth = newWidth;
-        this.currentHeight = newHeight;
-
-        // Re-convert to grayscale with new dimensions
-        return this.convertToGrayscale();
     }
 
     /**

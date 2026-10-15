@@ -53,12 +53,9 @@ class PDFLibExporter {
             // Create PDF document with appropriate page size
             const pdfDoc = await this.PDFDocument.create();
 
-            // A4 dimensions in points (1 inch = 72 points, 1 mm = 2.834645669 points)
-            const mmToPoints = 2.834645669;
-            const pageWidthMm = 210;
-            const pageHeightMm = 297;
-            const pageWidthPts = pageWidthMm * mmToPoints;
-            const pageHeightPts = pageHeightMm * mmToPoints;
+            // US Letter in points (1 inch = 72 points), matching the crop aspect ratio
+            const pageWidthPts = 8.5 * 72;
+            const pageHeightPts = 11 * 72;
 
             // Add page with appropriate orientation
             const page = pdfDoc.addPage([
@@ -67,29 +64,18 @@ class PDFLibExporter {
             ]);
 
             // The circle canvas is rendered at its exact final size (edge margin included), so embed it as-is
-            const croppedWidth = canvas.width;
-            const croppedHeight = canvas.height;
-
-            // Get the canvas image as PNG
             const imageDataUrl = canvas.toDataURL('image/png');
             const imageBytes = await fetch(imageDataUrl).then(res => res.arrayBuffer());
             const pngImage = await pdfDoc.embedPng(imageBytes);
 
-            // Calculate image dimensions and position
-            const margin = 2.54; // 0.1 inch margin on all sides
-            const marginPts = margin * mmToPoints;
-
+            // Fit the artwork inside a 0.1 inch margin on all sides (all values in points)
+            const marginPts = 0.1 * 72;
             const maxWidth = (isLandscape ? pageHeightPts : pageWidthPts) - (marginPts * 2);
             const maxHeight = (isLandscape ? pageWidthPts : pageHeightPts) - (marginPts * 2);
 
-            // Calculate scaling to fit on page (all values in points)
-            let imgWidth = maxWidth * 0.9;
-            let imgHeight = (croppedHeight / croppedWidth) * imgWidth;
-
-            if (imgHeight > maxHeight * 0.9) {
-                imgHeight = maxHeight * 0.9;
-                imgWidth = (croppedWidth / croppedHeight) * imgHeight;
-            }
+            const fitScale = Math.min(maxWidth / canvas.width, maxHeight / canvas.height);
+            const imgWidth = canvas.width * fitScale;
+            const imgHeight = canvas.height * fitScale;
 
             // Calculate centered position (in points)
             const xPts = marginPts + ((maxWidth - imgWidth) / 2);
