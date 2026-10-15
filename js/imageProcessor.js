@@ -217,30 +217,7 @@ class ImageProcessor {
         const width = Math.max(1, Math.round(this.originalWidth * scale));
         const height = Math.max(1, Math.round(this.originalHeight * scale));
 
-        const canvas = document.createElement('canvas');
-        canvas.width = width;
-        canvas.height = height;
-
-        const ctx = canvas.getContext('2d');
-        if (!ctx) {
-            throw new Error('Could not get canvas context for resizing');
-        }
-
-        // Composite onto white so transparent pixels read as white, not black
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, width, height);
-        ctx.drawImage(this.sourceImage, 0, 0, width, height);
-
-        const data = ctx.getImageData(0, 0, width, height).data;
-
-        // Convert to grayscale (RGBA → Gray)
-        // Formula: gray = 0.299*R + 0.587*G + 0.114*B
-        for (let i = 0; i < data.length; i += 4) {
-            const gray = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
-            data[i] = gray;     // R
-            data[i + 1] = gray; // G
-            data[i + 2] = gray; // B
-        }
+        const data = this._drawGrayscale(document.createElement('canvas'), width, height);
 
         this.grayscaleData = data;
         this.currentWidth = width;
@@ -250,25 +227,47 @@ class ImageProcessor {
     }
 
     /**
-     * Draw grayscale preview to canvas
+     * Draw the full-resolution source to a canvas in grayscale (for the preview)
      * @param {HTMLCanvasElement} canvas - Canvas element to draw to
      */
     drawGrayscalePreview(canvas) {
-        if (!this.grayscaleData) {
-            throw new Error('No grayscale data available');
+        if (!this.sourceImage) {
+            throw new Error('No image loaded');
         }
+        this._drawGrayscale(canvas, this.originalWidth, this.originalHeight);
+    }
 
-        canvas.width = this.currentWidth;
-        canvas.height = this.currentHeight;
+    /**
+     * Draw the source scaled to width×height onto canvas and convert it to grayscale in place
+     * Transparent pixels are composited onto white so they read as white, not black.
+     * Formula: gray = 0.299*R + 0.587*G + 0.114*B
+     * @private
+     * @returns {Uint8ClampedArray} Grayscale RGBA pixel data
+     */
+    _drawGrayscale(canvas, width, height) {
+        canvas.width = width;
+        canvas.height = height;
 
         const ctx = canvas.getContext('2d');
         if (!ctx) {
             throw new Error('Could not get canvas context');
         }
 
-        const imageData = ctx.createImageData(this.currentWidth, this.currentHeight);
-        imageData.data.set(this.grayscaleData);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, width, height);
+        ctx.drawImage(this.sourceImage, 0, 0, width, height);
+
+        const imageData = ctx.getImageData(0, 0, width, height);
+        const data = imageData.data;
+        for (let i = 0; i < data.length; i += 4) {
+            const gray = Math.round(0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]);
+            data[i] = gray;     // R
+            data[i + 1] = gray; // G
+            data[i + 2] = gray; // B
+        }
         ctx.putImageData(imageData, 0, 0);
+
+        return data;
     }
 
     /**

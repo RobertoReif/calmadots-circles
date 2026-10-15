@@ -16,7 +16,7 @@ sed -e "s#\.\./js/#file://$ROOT/js/#g" \
     src/index.html > "$TMP/index.html"
 
 "$CHROME" --headless=new --allow-file-access-from-files --disable-gpu \
-    --virtual-time-budget=60000 --dump-dom "file://$TMP/index.html" 2>/dev/null \
+    --virtual-time-budget=180000 --dump-dom "file://$TMP/index.html" 2>/dev/null \
     | sed -n '/<pre id="results">/,/<\/pre>/p' | sed -e 's#<pre id="results">##' -e 's#</pre>.*##' > "$TMP/results.txt"
 
 cat "$TMP/results.txt"

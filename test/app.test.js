@@ -6,6 +6,11 @@
 // Headless Chrome doesn't fire animation frames reliably; renders are chunked on them
 window.requestAnimationFrame = cb => setTimeout(cb, 0);
 
+// Under --virtual-time-budget, timers run ahead of real image decoding, so the app's
+// 30s image-load timeout can fire before a test image decodes. Drop timers that long.
+const realSetTimeout = window.setTimeout;
+window.setTimeout = (cb, ms, ...args) => (ms >= 30000 ? 0 : realSetTimeout(cb, ms, ...args));
+
 window.addEventListener('load', async () => {
     const log = [];
     const ok = (condition, message) => log.push((condition ? 'PASS ' : 'FAIL ') + message);
@@ -57,6 +62,8 @@ window.addEventListener('load', async () => {
         ok(app.circleCanvas.width === layout.canvasWidth && app.circleCanvas.height === layout.canvasHeight,
             `canvas matches layout ${app.circleCanvas.width}x${app.circleCanvas.height}`);
         ok(ip.grayscaleData[0] === 255, `transparent pixel reads as white (${ip.grayscaleData[0]})`);
+        ok(app.grayscaleCanvas.width === 1500 && app.grayscaleCanvas.height === 1000,
+            `preview at full resolution: ${app.grayscaleCanvas.width}x${app.grayscaleCanvas.height}`);
 
         // Rapid long-edge changes, then a config change mid-render: last values must win
         for (const value of [100, 150, 120]) {
@@ -83,7 +90,8 @@ window.addEventListener('load', async () => {
         }
 
         // Crop the right half; crop must come from the full-res source
-        app.cropSelection = { startX: 60, startY: 0, endX: 120, endY: app.selectionCanvas.height };
+        const sw = app.selectionCanvas.width;
+        app.cropSelection = { startX: sw * 0.5, startY: 0, endX: sw, endY: app.selectionCanvas.height };
         app.handleCrop('portrait');
         ok(ip.originalWidth >= 700, `crop from full-res source: ${ip.originalWidth}x${ip.originalHeight}`);
         ok(await idle(), 'crop render finished');

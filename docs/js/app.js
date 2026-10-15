@@ -311,13 +311,16 @@ class CircleSizeApp {
         // Clear the selected area (make it transparent)
         ctx.clearRect(startX, startY, width, height);
 
+        // Size the border and handles in screen pixels (the canvas is full-res, shown scaled down)
+        const screenPx = this.selectionCanvas.width / (this.selectionCanvas.getBoundingClientRect().width || this.selectionCanvas.width);
+
         // Draw border around selection
         ctx.strokeStyle = '#0077B5';
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 2 * screenPx;
         ctx.strokeRect(startX, startY, width, height);
 
         // Draw corner handles
-        const handleSize = 8;
+        const handleSize = 8 * screenPx;
         ctx.fillStyle = '#0077B5';
         ctx.fillRect(startX - handleSize / 2, startY - handleSize / 2, handleSize, handleSize);
         ctx.fillRect(endX - handleSize / 2, startY - handleSize / 2, handleSize, handleSize);
@@ -356,6 +359,7 @@ class CircleSizeApp {
 
             const result = this.imageProcessor.crop(orientation, customCropArea);
             this.showMessage(this.cropStatus, result.message, 'success');
+            this.showSourcePreview();
             this.prepareImage();
             this.renderCircles();
         } catch (error) {
@@ -370,6 +374,7 @@ class CircleSizeApp {
         try {
             this.showMessage(this.uploadStatus, 'Converting to grayscale...', 'info');
 
+            this.showSourcePreview();
             this.prepareImage();
 
             this.showMessage(this.uploadStatus, 'Image ready!', 'success');
@@ -388,12 +393,17 @@ class CircleSizeApp {
     }
 
     /**
-     * Downsample the source to the long-edge setting (full-res stays available for cropping),
-     * then refresh the grayscale preview and crop overlay
+     * Downsample the source to the long-edge setting (full-res stays available for cropping)
      */
     prepareImage() {
         this.fitLongEdgeToCanvasLimit();
         this.imageProcessor.resizeByLongEdge(this.longEdgePixels);
+    }
+
+    /**
+     * Draw the full-resolution grayscale preview and reset the crop overlay to match
+     */
+    showSourcePreview() {
         this.imageProcessor.drawGrayscalePreview(this.grayscaleCanvas);
         this.initializeSelectionCanvas();
     }
