@@ -31,3 +31,6 @@ npm-debug.log
 
 # Claude Code
 .claude/
+
+# Local notes, old review docs and sample output (not part of the app)
+notes/

@@ -628,15 +628,9 @@ class CircleSizeApp {
             element.classList.add(type);
         }
     }
-
-    /**
-     * Load jsPDF library if not already loaded
-     * Includes security measures: SRI verification, timeout, and error handling
-     */
 }
 
 // Initialize app when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
     window.app = new CircleSizeApp();
-    console.log('CircleSize app initialized');
 });
