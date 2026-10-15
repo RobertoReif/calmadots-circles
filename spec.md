@@ -25,7 +25,7 @@ Units: **px** below means canvas pixels of the rendered circle image unless stat
 - Cropping is optional. Without a crop, the whole image is used and the PDF still fits it on a Letter page (see Export).
 
 ### Resolution (Long Edge)
-- A **long edge** slider sets how many source pixels the image is downsampled to on its longer side: range 10–500, step 5, **default 250**. Aspect ratio is preserved; the short side is rounded to the nearest pixel (minimum 1).
+- A **long edge** slider sets how many source pixels the image is downsampled to on its longer side: range 10–500, step 5, **default 100**. Aspect ratio is preserved; the short side is rounded to the nearest pixel (minimum 1).
 - The long edge applies immediately after upload, after a crop and whenever the slider moves.
 - **Canvas limit:** if the resulting circle canvas would exceed the browser's canvas limit, the long edge is lowered in steps of 5 until it fits, the slider updates, and a notice says so. Limits: iOS/iPadOS 16,777,216 px area and 16,384 px per side; other browsers 268,435,456 px area and 32,767 px per side.
 
@@ -47,11 +47,11 @@ Units: **px** below means canvas pixels of the rendered circle image unless stat
 
   | Parameter | Range | Step | Default |
   |---|---|---|---|
-  | Min circle radius | 1–5 px | 1 | 1 |
-  | Max circle radius | 10–30 px | 1 | 15 |
+  | Min circle radius | 1–5 px | 1 | 5 |
+  | Max circle radius | 10–30 px | 1 | 30 |
   | Stroke width | 1–3 px | 0.5 | 2 |
   | Spacing | 0–5 | 1 | 0 |
-  | Long edge | 10–500 source px | 5 | 250 |
+  | Long edge | 10–500 source px | 5 | 100 |
 
   A **Reset** button restores the circle defaults (radius, stroke, spacing).
 - **Responsiveness:** any change re-renders. A change made while a render is in progress cancels that render and starts a new one with the latest settings; the displayed image is always a complete render.
@@ -60,7 +60,7 @@ Units: **px** below means canvas pixels of the rendered circle image unless stat
 - **Library:** pdf-lib 1.17.1, loaded from cdnjs.
 - **Page:** one US Letter page, 612×792 pt. Landscape (792×612) when the image is wider than tall; otherwise portrait.
 - **Placement:** the circle canvas is embedded as a single PNG, scaled uniformly to the largest size that fits inside a **0.1 in (7.2 pt) margin** on every side, and centered.
-- **Resolution:** the embedded image keeps the canvas's full pixel size. At the defaults (long edge 250, max radius 15) the canvas is about 7,500 px on its long side, roughly 690 dpi across 10.8 in.
+- **Resolution:** the embedded image keeps the canvas's full pixel size. At the defaults (long edge 100, max radius 30) the canvas is about 6,000 px on its long side, roughly 555 dpi across 10.8 in.
 - **Filename:** `<original name without extension>-circles.pdf`.
 - **Not yet implemented:** the "Include metadata" checkbox currently has no effect. Planned: write filename, dimensions, circle settings and export time into the PDF document properties.
 
@@ -149,7 +149,7 @@ js/pdflibExporter.js  PDFLibExporter: Letter page layout and PNG embedding
 
 Automated checks live in `test/app.test.js` (run `scripts/run-tests.sh`); the rest are manual.
 
-1. **Upload downsampling:** given a 1500×1000 PNG, when uploaded with defaults, the grayscale image is 250×167 and the circle canvas size equals the formula in §2. *(automated)*
+1. **Upload downsampling:** given a 1500×1000 PNG, when uploaded with defaults, the grayscale image is 100×67 and the circle canvas size equals the formula in §2. *(automated)*
 2. **No clipping:** given an all-black image, every edge circle is drawn whole and no ink touches the canvas border, in stroke and fill modes. *(automated)*
 3. **Transparency:** a fully transparent pixel has grayscale 255. *(automated)*
 4. **Latest settings win:** when the long edge is changed several times quickly and max radius is changed mid-render, the final canvas matches the last values. *(automated)*

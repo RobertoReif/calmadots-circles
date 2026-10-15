@@ -38,7 +38,8 @@ window.addEventListener('load', async () => {
             for (let x = 0; x < c.width; x++) if (dark(x, 0) || dark(x, c.height - 1)) borderInk = true;
             for (let y = 0; y < c.height; y++) if (dark(0, y) || dark(c.width - 1, y)) borderInk = true;
             const { edgeMargin: m } = v.getLayout(4, 3);
-            const edgeInk = (dark(m - 15, m) || dark(m - 14, m)) && (dark(c.width - 1 - (m - 15), m) || dark(c.width - 1 - (m - 14), m));
+            const r = v.config.maxRadius;
+            const edgeInk = (dark(m - r, m) || dark(m - r + 1, m)) && (dark(c.width - 1 - (m - r), m) || dark(c.width - 1 - (m - r + 1), m));
             ok(!borderInk && edgeInk, `${fill ? 'fill' : 'stroke'}: edge circles drawn whole, none clipped`);
         }
 
@@ -51,7 +52,7 @@ window.addEventListener('load', async () => {
         ok(await idle(), 'first render finished: ' + app.uploadStatus.textContent);
 
         const ip = app.imageProcessor;
-        ok(ip.currentWidth === 250 && ip.currentHeight === 167, `upload downsampled to ${ip.currentWidth}x${ip.currentHeight}`);
+        ok(ip.currentWidth === 100 && ip.currentHeight === 67, `upload downsampled to ${ip.currentWidth}x${ip.currentHeight}`);
         let layout = app.visualizer.getLayout(ip.currentWidth, ip.currentHeight);
         ok(app.circleCanvas.width === layout.canvasWidth && app.circleCanvas.height === layout.canvasHeight,
             `canvas matches layout ${app.circleCanvas.width}x${app.circleCanvas.height}`);

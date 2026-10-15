@@ -64,7 +64,7 @@ class CircleSizeApp {
         this.processingText = document.getElementById('processingText');
         this.progressFill = document.getElementById('progressFill');
         this.fillCircles = false; // Track fill state
-        this.longEdgePixels = 250; // Track long edge pixel count
+        this.longEdgePixels = 100; // Track long edge pixel count
 
         // Export section
         this.exportSection = document.getElementById('exportSection');
@@ -515,8 +515,8 @@ class CircleSizeApp {
      * Reset configuration to defaults
      */
     async resetToDefaults() {
-        this.minRadiusSlider.value = 1;
-        this.maxRadiusSlider.value = 15;
+        this.minRadiusSlider.value = 5;
+        this.maxRadiusSlider.value = 30;
         this.strokeWidthSlider.value = 2;
         this.spacingSlider.value = 0;
 

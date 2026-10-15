@@ -7,7 +7,7 @@ Convert images into stunning circle-based visualizations where pixel darkness is
 - **Image Upload**: Drag & drop or select JPG, PNG, WebP, or GIF images
 - **Grayscale Conversion**: Automatic grayscale preview
 - **Crop**: Drag to select a US Letter (8.5×11) portrait or landscape crop
-- **Resolution**: Long-edge slider (10–500 pixels, default 250) sets how many circles span the image
+- **Resolution**: Long-edge slider (10–500 pixels, default 100) sets how many circles span the image
 - **Circle Visualization**: Convert pixels to circles with customizable parameters
   - Min/Max circle radius (1–30px)
   - Stroke width (1–3px)
@@ -132,8 +132,8 @@ Edit CSS variables in `css/styles.css`:
 Modify default values in `js/canvas.js`:
 ```javascript
 this.config = {
-    minRadius: 1,      // pixels
-    maxRadius: 15,     // pixels
+    minRadius: 5,      // pixels
+    maxRadius: 30,     // pixels
     strokeWidth: 2,    // pixels
     spacing: 0,        // pixels skipped between samples
 };

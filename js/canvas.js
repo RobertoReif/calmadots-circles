@@ -6,8 +6,8 @@
 class CircleVisualizer {
     constructor() {
         this.config = {
-            minRadius: 1,
-            maxRadius: 15,
+            minRadius: 5,
+            maxRadius: 30,
             strokeWidth: 2,
             spacing: 0,
         };

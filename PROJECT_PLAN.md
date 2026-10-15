@@ -13,7 +13,7 @@ Status key: ✅ done · 🔶 in progress / partly done · ⬜ not started
 | 0. Technical spike (PDF) | ✅ | Superseded: final library is pdf-lib (see Decisions) |
 | 1. Project setup | ✅ | `src/`, `js/`, `css/`, `docs/` for Pages |
 | 2. Upload & grayscale | ✅ | Includes transparency → white, corrupt-file errors |
-| 3. Resizing (long edge) | ✅ | Long-edge slider, default 250; canvas-limit check |
+| 3. Resizing (long edge) | ✅ | Long-edge slider, default 100; canvas-limit check |
 | 3b. Crop (US Letter) | ✅ | Full-res crop; overlay misaligned on narrow screens (see Remaining) |
 | 4. Circle visualization | ✅ | Grid layout, cancellable chunked render, fill toggle |
 | 5. PDF export | 🔶 | Letter page with 0.1in margins works; metadata not implemented; viewer/browser testing not done |
@@ -40,7 +40,7 @@ Status key: ✅ done · 🔶 in progress / partly done · ⬜ not started
 - **Done when:** acceptance criteria 1, 3 and 8 in the spec pass
 
 ## Phase 3: Resizing & Crop ✅
-- ✅ Long-edge slider (10–500, step 5, default 250), applied on upload, crop and slider change
+- ✅ Long-edge slider (10–500, step 5, default 100), applied on upload, crop and slider change
 - ✅ Canvas-limit check lowers the long edge with a notice (iOS 16.7M px; others 268M px / 32,767 px side)
 - ✅ Crop selection constrained to 8.5:11 or 11:8.5, taken from the full-resolution source
 - **Done when:** acceptance criteria 6 and 7 pass
@@ -119,6 +119,7 @@ Before pushing to `master` (which deploys Pages):
 | 2026-10-15 | **US Letter** page (was A4) | Matches the 8.5:11 crop ratio, so margins are even |
 | 2026-10-15 | Canvas sized exactly to the artwork; no padding/crop step | The exporter cropped an already-cropped canvas, shifting and clipping the PDF |
 | 2026-10-15 | Default long edge 250 with an automatic canvas-limit cap | More detail by default without blank canvases on iOS |
+| 2026-10-15 | Defaults changed to min radius 5, max radius 30, long edge 100 | Requested by the project owner |
 | 2026-10-15 | Cancel stale renders instead of Web Workers | Fixes dropped/mixed slider updates; workers not needed at current sizes |
 
 ## Risks
