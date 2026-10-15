@@ -65,7 +65,7 @@ class CircleSizeApp {
         this.processingText = document.getElementById('processingText');
         this.progressFill = document.getElementById('progressFill');
         this.fillCircles = false; // Track fill state
-        this.longEdgePixels = 100; // Track long edge pixel count
+        this.longEdgePixels = 250; // Track long edge pixel count
 
         // Export section
         this.exportSection = document.getElementById('exportSection');
