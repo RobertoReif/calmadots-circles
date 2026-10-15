@@ -1,5 +1,7 @@
 # Phase 0: Technical Spike - PDF Export Validation
 
+> **Superseded (2026-10-15):** the app now uses **pdf-lib** and a US Letter page. jsPDF and SimplePdfGenerator were removed. This document is kept as a record of the original spike; see PROJECT_PLAN.md "Key Technical Decisions".
+
 **Goal**: Validate that jsPDF can successfully render circle-based visualizations and embed them in PDFs with acceptable quality and performance.
 
 **Timeline**: 4-6 hours

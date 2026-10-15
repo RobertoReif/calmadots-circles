@@ -1,306 +1,98 @@
 # CircleSize - Project Implementation Plan
 
-## Phase Overview
+**Last updated**: 2026-10-15. See [spec.md](./spec.md) for intended behavior.
 
-This project is organized into **7 phases** with clear dependencies. A technical spike (Phase 0) validates critical PDF export approach early to mitigate risk.
-
-**Critical Path**: Phase 0 → Phase 4 (circle visualization) → Phase 5 (PDF export)
+Status key: ✅ done · 🔶 in progress / partly done · ⬜ not started
 
 ---
 
-## Phase 0: Technical Spike - PDF & Circle Rendering Validation (0.5 day)
+## Status at a Glance
 
-**Goal**: De-risk the most uncertain technical component before Phase 4 development
-
-**IMPORTANT**: Execute this phase immediately after Phase 1. Do not wait until Phase 5.
-
-### Tasks
-- [ ] Research jsPDF capabilities and limitations for circle rendering
-- [ ] Create prototype: render circles to Canvas, embed as image in PDF using jsPDF
-- [ ] Test PDF output quality in multiple viewers (Adobe Reader, Preview, Browser)
-- [ ] Profile Canvas rendering performance with 500×500px image (250k circles)
-- [ ] Validate PDF file size and export time
-- [ ] Document findings and chosen approach
-
-**Success Criteria**:
-- PDF exports successfully with black circle outlines visible
-- Export completes in <3 seconds for 500×500px image
-- PDF file size is <10MB for test image
-- Approach is confirmed viable before Phase 4 starts
-
-**Dependencies**: Phase 1
-**Estimated Time**: 4-6 hours
-**Risk Mitigation**: Prevents late-stage discovery that jsPDF approach doesn't work
+| Phase | Status | Notes |
+|-------|--------|-------|
+| 0. Technical spike (PDF) | ✅ | Superseded: final library is pdf-lib (see Decisions) |
+| 1. Project setup | ✅ | `src/`, `js/`, `css/`, `docs/` for Pages |
+| 2. Upload & grayscale | ✅ | Includes transparency → white, corrupt-file errors |
+| 3. Resizing (long edge) | ✅ | Long-edge slider, default 250; canvas-limit check |
+| 3b. Crop (US Letter) | ✅ | Full-res crop; overlay misaligned on narrow screens (see Remaining) |
+| 4. Circle visualization | ✅ | Grid layout, cancellable chunked render, fill toggle |
+| 5. PDF export | 🔶 | Letter page with 0.1in margins works; metadata not implemented; viewer/browser testing not done |
+| 6. UI/UX & responsiveness | 🔶 | Styled per style guide; mobile layout not verified |
+| 7. Testing, docs & deployment | 🔶 | Deployed to Pages; automated tests and README done; cross-browser testing not done |
 
 ---
 
-## Phase 1: Project Setup (1 day)
+## Phase 0: Technical Spike ✅
+- ✅ Prototype circles on Canvas embedded as a PNG in a PDF
+- ✅ Findings recorded in [TECHNICAL_SPIKE.md](./TECHNICAL_SPIKE.md) (historical; its jsPDF/SimplePdfGenerator conclusion was later replaced)
 
-**Goal**: Establish project structure, development environment, and GitHub Pages configuration
+## Phase 1: Project Setup ✅
+- ✅ Directory structure, HTML boilerplate, base CSS from the style guide
+- ✅ Modules: `app.js`, `imageProcessor.js`, `canvas.js`, `pdflibExporter.js`
+- ✅ GitHub Pages serving `docs/`
 
-### Tasks
-- [ ] Set up project directory structure (src/, css/, js/, assets/)
-- [ ] Create HTML boilerplate with semantic structure
-- [ ] Initialize CSS with base styles (colors, typography from style guide)
-- [ ] Create JavaScript module structure (canvas.js, imageProcessor.js, pdfExporter.js)
-- [ ] Configure GitHub Pages (docs/ folder or gh-pages branch)
-- [ ] Add .gitignore and README skeleton
-- [ ] Test local development environment
+## Phase 2: Image Upload & Processing ✅
+- ✅ File input with drag and drop; JPG/PNG/WebP/GIF only
+- ✅ Reject images outside 10×10 – 2000×2000
+- ✅ Grayscale `0.299R + 0.587G + 0.114B`; transparent pixels composited onto white
+- ✅ Metadata display (filename, dimensions, size)
+- ✅ Load/decode failures show an error instead of hanging
+- **Done when:** acceptance criteria 1, 3 and 8 in the spec pass
 
-**Dependencies**: None
-**Estimated Time**: 2-3 hours
+## Phase 3: Resizing & Crop ✅
+- ✅ Long-edge slider (10–500, step 5, default 250), applied on upload, crop and slider change
+- ✅ Canvas-limit check lowers the long edge with a notice (iOS 16.7M px; others 268M px / 32,767 px side)
+- ✅ Crop selection constrained to 8.5:11 or 11:8.5, taken from the full-resolution source
+- **Done when:** acceptance criteria 6 and 7 pass
 
----
+## Phase 4: Circle Visualization ✅
+- ✅ Radius formula and adaptive stroke (`max(1, darkness × stroke)`, no rounding)
+- ✅ Grid pitch `2 × max_radius`, edge margin so no circle is clipped
+- ✅ Chunked rendering off-screen; a newer render cancels an older one
+- ✅ Controls: min/max radius, stroke, spacing, reset, fill toggle
+- ⬜ Remember last-used settings in localStorage (optional)
+- **Done when:** acceptance criteria 2 and 4 pass
 
-## Phase 2: Image Upload & Processing (2-3 days)
+## Phase 5: PDF Export 🔶
+- ✅ pdf-lib, US Letter, orientation from image shape, 0.1in margin, centered
+- ✅ Single crop/geometry source: the exporter embeds the canvas as rendered
+- ⬜ Implement or remove the "Include metadata" checkbox (spec: document properties)
+- ⬜ Check PDFs in Preview, Chrome, Adobe Reader (criterion 9)
+- ⬜ Measure export time and file size at defaults against spec targets (<3 s, <10 MB)
+- **Done when:** acceptance criteria 5 and 9 pass and targets are measured
 
-**Goal**: Allow users to upload images and convert to grayscale
+## Phase 6: UI/UX & Responsiveness 🔶
+- ✅ Colors, typography and layout from the style guide
+- ⬜ Fix crop overlay on narrow screens: `.selection-canvas` has no `max-width`, so it is larger than and misaligned with the preview when the container is narrower than 500px
+- ⬜ Verify layout at ≤640px, 641–1024px, >1024px
+- ⬜ Touch support for crop selection (currently mouse events only)
+- **Done when:** crop selection lines up with the pointer at any window width, on desktop and touch
 
-### 2a: Upload Component
-- [ ] Build HTML file input with drag-and-drop support
-- [ ] Add file type validation (JPG, PNG, WebP, GIF only)
-- [ ] Add file size check (max 2000×2000px dimensions)
-- [ ] Display user-friendly error messages
-- [ ] Show uploading/processing state indicator
-
-### 2b: Image Processing
-- [ ] Implement grayscale conversion using Canvas API
-  - Load image into hidden Canvas
-  - Extract pixel data using `getImageData()`
-  - Apply grayscale formula: `gray = 0.299*R + 0.587*G + 0.114*B`
-  - Return grayscale pixel array
-- [ ] Display uploaded image preview in UI
-- [ ] Show image metadata (filename, dimensions, file size)
-- [ ] Handle errors gracefully (unsupported formats, corrupted files)
-
-**Dependencies**: Phase 1
-**Estimated Time**: 6-8 hours
-
----
-
-## Phase 3: Image Resizing (1-2 days)
-
-**Goal**: Allow users to resize images while preserving aspect ratio
-
-### Tasks
-- [ ] Build resize slider (50–2000px width range)
-- [ ] Implement aspect ratio preservation logic
-- [ ] Display current dimensions in real-time
-- [ ] Apply resize using Canvas `drawImage()` with scaling
-- [ ] Add debouncing for performance during slider drag
-- [ ] Test with various image sizes and aspect ratios
-
-**Performance Note**: Performance testing in this phase (not deferred to Phase 5)
-
-**Dependencies**: Phase 2
-**Estimated Time**: 3-4 hours
+## Phase 7: Testing, Documentation & Deployment 🔶
+- ✅ Deployed via GitHub Pages from `docs/`
+- ✅ `scripts/sync-docs.sh` mirrors `src/index.html`, `js/`, `css/` into `docs/`; `--check` verifies
+- ✅ Automated end-to-end checks: `scripts/run-tests.sh` (headless Chrome, `test/app.test.js`)
+- ⬜ Cross-browser manual pass: Chrome, Firefox, Safari (macOS + real iOS device), Edge
+- ✅ README updated for pdf-lib, Letter, crop and scripts
+- ⬜ Accessibility pass: keyboard navigation, contrast, Lighthouse
+- **Done when:** all spec acceptance criteria pass and the manual pass has no open issues
 
 ---
 
-## Phase 4: Circle Visualization (3-4 days)
+## Remaining Work (in order)
 
-**Goal**: Convert grayscale pixels to circles based on darkness
+1. Crop overlay on narrow screens + touch selection (Phase 6)
+2. Decide and implement or remove the metadata checkbox (Phase 5)
+3. Manual browser and PDF viewer pass, including a real iPhone/iPad (Phases 5, 7)
+4. Measure render/export time and PDF size at defaults (Phase 5)
 
-### 4a: Visualization Algorithm & Testing
-- [ ] Implement correct circle sizing formula:
-  ```javascript
-  normalized_darkness = (255 - pixel_grayscale_value) / 255;
-  circle_radius = min_radius + (normalized_darkness * (max_radius - min_radius));
-  ```
-- [ ] Test edge cases:
-  - White pixel (255) → small circle (min_radius)
-  - Black pixel (0) → large circle (max_radius)
-  - Gray pixel (127) → medium circle
-- [ ] Handle stroke width adaptation for small circles
-- [ ] Create unit tests for circle calculation
+## Release Checklist
 
-### 4b: Canvas Rendering
-- [ ] Render circles on Canvas:
-  - Iterate through grayscale pixel array
-  - For each pixel, draw hollow circle at (x, y) position
-  - Use `canvas.arc()` with black stroke, transparent fill
-  - Apply stroke width (2px default)
-- [ ] Optimize rendering (use batch operations if needed)
-- [ ] Add real-time preview to canvas element
-- [ ] Profile performance with 500×500, 750×750, 1000×1000 images
-- [ ] Implement downsampling if >1000×1000px (sample every nth pixel)
-
-### 4c: Configuration Controls
-- [ ] Add UI sliders/inputs for:
-  - Min circle radius (1–5px)
-  - Max circle radius (10–30px)
-  - Stroke width (1–3px)
-  - Circle spacing (0–5px gap)
-- [ ] Update canvas preview in real-time as user changes settings
-- [ ] Store last-used settings in localStorage (optional)
-- [ ] Add reset-to-defaults button
-
-**Performance Benchmarking**: Record processing times at various resolutions
-**Dependencies**: Phase 3
-**Estimated Time**: 10-12 hours
-
----
-
-## Phase 5: PDF Export & Performance Optimization (2-3 days)
-
-**Goal**: Enable high-quality PDF download and ensure app performance at scale
-
-### 5a: PDF Export Implementation
-- [ ] Render circles Canvas to high-resolution image (optionally 2x device pixel ratio)
-- [ ] Use jsPDF to create A4 PDF
-- [ ] Embed Canvas image (as PNG) into PDF with automatic scaling
-- [ ] Add optional metadata fields (filename, dimensions, circle settings, export date)
-- [ ] Implement PDF download trigger
-- [ ] Test PDF output in multiple viewers (Adobe Reader, Preview, Browser)
-- [ ] Validate PDF file size (<10MB for most images)
-
-### 5b: Performance Optimization
-- [ ] Implement Web Worker for circle calculation (offload from main thread)
-  - Move `getCircleProperties()` and pixel iteration to worker
-  - Post results back to main thread for Canvas rendering
-- [ ] Add loading indicator and progress bar for large images
-- [ ] Implement image downsampling for >1000×1000px:
-  - Offer user choice: "Full resolution (slow)" vs "Optimized (fast)"
-  - Auto-downsample if >2000×2000px
-- [ ] Optimize Canvas rendering (requestAnimationFrame, batch draws)
-- [ ] Profile and record performance metrics
-
-### 5c: Testing
-- [ ] Test PDF export across browsers (Chrome, Firefox, Safari, Edge)
-- [ ] Test with various image sizes and content types
-- [ ] Verify export time is <3 seconds for typical images
-- [ ] Check file sizes are reasonable
-
-**Dependencies**: Phase 4, Phase 0 (technical spike)
-**Estimated Time**: 8-10 hours
-
----
-
-## Phase 6: UI/UX, Styling & Responsiveness (2-3 days)
-
-**Goal**: Implement professional UI following Roberto Reif's style guide and ensure responsive design
-
-### 6a: Design & Styling
-- [ ] Implement color palette per style guide:
-  - Background: `#ffffff`
-  - Text Primary: `#1a1a1a`
-  - Text Secondary: `#666666`
-  - Accent: `#0077B5`
-  - Borders: `#e0e0e0`
-- [ ] Implement typography:
-  - System font stack: `-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif`
-  - Heading sizes: up to 2rem
-  - Body text: 1rem, line-height 1.6
-- [ ] Create layout:
-  - Desktop: max-width 1000px, 80px padding
-  - Mobile: 20–40px padding, single column
-  - Vertical spacing: 40–60px between sections
-- [ ] Style form elements:
-  - Clean, minimal inputs with subtle borders
-  - Focus states with color change
-  - 44px minimum tap targets (mobile)
-- [ ] Add subtle shadows and hover effects (not heavy animations)
-
-### 6b: Responsive Design
-- [ ] Implement mobile breakpoint (≤640px):
-  - Collapsible control panels
-  - Adjusted spacing and padding
-  - Touch-friendly button sizing
-- [ ] Test on desktop (>1024px), tablet (641–1024px), mobile (≤640px)
-- [ ] Ensure canvas preview scales responsively
-- [ ] Test orientation changes (landscape/portrait)
-
-### 6c: User Experience Enhancements
-- [ ] Add helpful tooltips and inline guidance
-- [ ] Display processing status (uploading, resizing, rendering, exporting)
-- [ ] Show file size and processing time estimates
-- [ ] Add clear error messages for all failure cases
-- [ ] Implement keyboard shortcuts (optional: Ctrl+S for export)
-
-**Dependencies**: Phase 5
-**Estimated Time**: 8-10 hours
-
----
-
-## Phase 7: Testing, Documentation & Deployment (1-2 days)
-
-**Goal**: Comprehensive testing, documentation, and GitHub Pages deployment
-
-### 7a: Cross-Browser Testing
-- [ ] Test on Chrome (latest)
-- [ ] Test on Firefox (latest)
-- [ ] Test on Safari (14+, macOS & iOS)
-- [ ] Test on Edge (latest)
-- [ ] Document any browser-specific issues or workarounds
-
-### 7b: Feature Testing
-- [ ] Test full workflow: Upload → Resize → Configure → Preview → Export
-- [ ] Test with various image types (JPG, PNG, WebP, GIF, various sizes)
-- [ ] Test edge cases:
-  - Very small images (<100px)
-  - Very large images (2000×2000px)
-  - Extreme aspect ratios
-  - Corrupted files
-  - Unsupported formats
-- [ ] Performance testing: measure and record processing times
-
-### 7c: Accessibility & Quality Assurance
-- [ ] Verify color contrast ratios (WCAG AA standard)
-- [ ] Test with keyboard navigation only
-- [ ] Check semantic HTML structure
-- [ ] Run lighthouse audit for performance/accessibility
-- [ ] Fix any regressions or bugs
-
-### 7d: Documentation
-- [ ] Create comprehensive README.md with:
-  - Project description
-  - Feature list
-  - Usage instructions (screenshot walkthrough)
-  - Technical architecture overview
-  - Browser compatibility
-  - Performance notes
-  - Known limitations
-- [ ] Add inline code comments for complex algorithms
-- [ ] Document circle visualization formula and parameters
-
-### 7e: Deployment
-- [ ] Configure GitHub Pages (docs/ folder or gh-pages branch)
-- [ ] Build and optimize assets
-- [ ] Deploy to GitHub Pages
-- [ ] Test live app on production URL
-- [ ] Verify all features work on live version
-
-### 7f: Final QA
-- [ ] Test downloaded PDFs work in standard viewers
-- [ ] Verify no console errors in production
-- [ ] Test with real user feedback (if available)
-- [ ] Check for memory leaks with large images
-- [ ] Verify no data is stored/logged accidentally
-
-**Dependencies**: Phase 6
-**Estimated Time**: 6-8 hours
-
----
-
-## Implementation Order
-
-```
-Phase 0: Technical Spike (PDF/Circle Rendering) [4-6 hrs]
-    ↓
-Phase 1: Setup [2-3 hrs]
-    ↓
-Phase 2: Upload & Processing [6-8 hrs]
-    ↓
-Phase 3: Resizing [3-4 hrs]
-    ↓
-Phase 4: Circle Visualization [10-12 hrs]
-    ↓
-Phase 5: PDF Export & Optimization [8-10 hrs]
-    ↓
-Phase 6: UI/UX & Responsiveness [8-10 hrs]
-    ↓
-Phase 7: Testing & Deployment [6-8 hrs]
-```
+Before pushing to `master` (which deploys Pages):
+1. `scripts/sync-docs.sh` (then `--check`)
+2. Bump the `?v=` query on the script tags in `src/index.html` if any JS changed, then sync again
+3. `scripts/run-tests.sh` passes
+4. No `console.log` left in `js/`
 
 ---
 
@@ -308,115 +100,50 @@ Phase 7: Testing & Deployment [6-8 hrs]
 
 | Layer | Technology |
 |-------|-----------|
-| **Markup** | HTML5 (semantic structure) |
-| **Styling** | CSS3 (system fonts, no external dependencies) |
-| **Image Processing** | HTML5 Canvas API + Web Workers (optional) |
-| **PDF Export** | jsPDF library + Canvas-to-PNG embedding |
-| **Deployment** | GitHub Pages (static files only) |
-| **Build Tools** | None required (pure vanilla JS) |
-
----
+| **Markup** | HTML5 |
+| **Styling** | Plain CSS, system fonts |
+| **Image Processing** | Canvas API (main thread, chunked) |
+| **PDF Export** | pdf-lib 1.17.1 from cdnjs, PNG embedding |
+| **Testing** | Headless Chrome via `scripts/run-tests.sh` |
+| **Deployment** | GitHub Pages from `docs/` |
+| **Build Tools** | None |
 
 ## Key Technical Decisions
 
-| Decision | Rationale |
-|----------|-----------|
-| **Vanilla JavaScript** | No framework overhead; faster for GitHub Pages; minimal bundle size |
-| **Canvas API** | Native browser support; excellent for pixel manipulation; mature spec |
-| **Rasterized PDF (not vectors)** | Prevents massive PDF file sizes (vectors would create 10–50MB files); consistent across viewers |
-| **Web Workers (Phase 5b)** | Prevents UI blocking on large images; smooth user experience |
-| **No backend/server** | GitHub Pages is static-only; all processing client-side; better privacy |
-| **System fonts** | Follows style guide; fast loading; no external requests |
-| **Mobile-first design** | Ensures responsive layout; improves accessibility; simpler CSS |
+| Date | Decision | Rationale |
+|------|----------|-----------|
+| 2026-10-11 | Vanilla JS, no build step | Small app; static hosting |
+| 2026-10-11 | Rasterized PDF, not vector circles | Vector output would be very large; consistent across viewers |
+| 2026-10-11 | Spike chose a custom SimplePdfGenerator after jsPDF failed to load | Superseded below |
+| 2026-10-13 | Switched to jsPDF, then to **pdf-lib** | pdf-lib gave precise placement in points; jsPDF and SimplePdfGenerator removed 2026-10-15 |
+| 2026-10-15 | **US Letter** page (was A4) | Matches the 8.5:11 crop ratio, so margins are even |
+| 2026-10-15 | Canvas sized exactly to the artwork; no padding/crop step | The exporter cropped an already-cropped canvas, shifting and clipping the PDF |
+| 2026-10-15 | Default long edge 250 with an automatic canvas-limit cap | More detail by default without blank canvases on iOS |
+| 2026-10-15 | Cancel stale renders instead of Web Workers | Fixes dropped/mixed slider updates; workers not needed at current sizes |
 
----
+## Risks
 
-## Risk Mitigation
-
-| Risk | Mitigation Strategy |
-|------|-------------------|
-| **PDF quality is poor** | Phase 0 technical spike validates approach before Phase 4 development |
-| **Circle rendering is slow** | Performance benchmarking in Phase 4b; Web Workers in Phase 5b |
-| **Large images cause memory issues** | Implement downsampling for >1000×1000px; test on actual devices |
-| **Browser incompatibilities** | Start browser testing in Phase 2, not Phase 7; test continuously |
-| **jsPDF API limitations** | Technical spike (Phase 0) discovers this early; provides time to find alternatives |
-| **Algorithm bugs (circle formula)** | Unit tests in Phase 4a; visual verification with test images |
-| **Mobile UI breaks** | Responsive design in Phase 6b; test on real mobile devices |
-| **Deployment fails** | Test GitHub Pages in Phase 1; have manual backup deployment plan |
-
----
-
-## Success Criteria
-
-- [x] Users can upload common image formats (JPG, PNG, WebP, GIF)
-- [x] Images are converted to grayscale
-- [x] Users can resize images with aspect ratio preservation
-- [x] Circle visualization algorithm is correct (darker pixels → larger circles)
-- [x] Circles render as hollow shapes (black stroke, transparent fill)
-- [x] Circle visualization respects user-configured parameters (radius, stroke, spacing)
-- [x] PDF export works reliably across browsers
-- [x] PDF file sizes are reasonable (<10MB for typical images)
-- [x] Processing completes in acceptable time (<3 seconds for 1000×1000px)
-- [x] UI is responsive and works on mobile/tablet/desktop
-- [x] UI follows Roberto Reif's style guide (colors, typography, spacing)
-- [x] App is deployed and accessible via GitHub Pages URL
-- [x] Zero console errors in production
-- [x] All features tested in Chrome, Firefox, Safari, Edge
-- [x] Comprehensive documentation and README provided
-
----
-
-## Timeline Estimate
-
-| Phase | Time | Notes |
-|-------|------|-------|
-| Phase 0 (Technical Spike) | 4–6 hrs | Execute early to de-risk |
-| Phase 1 (Setup) | 2–3 hrs | |
-| Phase 2 (Upload & Processing) | 6–8 hrs | Plus debugging (allow 1–2 hrs buffer) |
-| Phase 3 (Resizing) | 3–4 hrs | |
-| Phase 4 (Circle Visualization) | 10–12 hrs | **Critical path**; most complex; allows buffer |
-| Phase 5 (PDF Export & Optimization) | 8–10 hrs | Depends on Phase 0 success |
-| Phase 6 (UI/UX & Responsiveness) | 8–10 hrs | Includes style guide implementation |
-| Phase 7 (Testing & Deployment) | 6–8 hrs | |
-| **TOTAL** | **47–61 hrs** | Realistic estimate with contingency |
-
-**Updated Realistic Timeline**: 60–80 hours (~8–10 working days for full-time developer)
-
-**Previous Estimate**: 50–65 hours (underestimated by ~15–20 hours)
-
----
-
-## Development Notes
-
-1. **Start Phase 0 immediately after Phase 1** — Do not defer PDF validation to Phase 5
-2. **Profile performance continuously** — Test with large images in Phase 3 and Phase 4, not just Phase 5
-3. **Browser test early and often** — Begin testing in Phase 2, expand in Phase 7
-4. **Follow style guide throughout** — Not just in Phase 6; design consistency from Phase 1
-5. **Implement accessibility from day 1** — Don't bolt on later (semantic HTML, ARIA, keyboard nav, color contrast)
-6. **Document as you build** — Add inline comments and architecture docs during development, not after
-7. **Version control discipline** — Commit frequently with clear messages; makes debugging easier
-8. **Test edge cases** — Very small/large images, extreme aspect ratios, corrupted files, etc.
-
----
+| Risk | Mitigation |
+|------|-----------|
+| **Browser canvas size limits** (blank canvas) | Long edge lowered automatically; limits are hard-coded per platform and need checking on real devices |
+| **Large canvas memory / slow render** | Default canvas ≈ 7,500 px long side; measure on mid-range laptop and phone (Remaining #4) |
+| **Unit conversions** (source px → canvas px → PDF pt) | One geometry function (`CircleVisualizer.getLayout`); exporter only scales the finished canvas; covered by tests |
+| **`docs/` drifting from source** | `scripts/sync-docs.sh --check` in the release checklist |
+| **Stale JS cached on Pages** | `?v=` cache-busting bump in the release checklist |
+| **pdf-lib CDN unavailable** | Export shows "PDF library not loaded"; consider vendoring if this occurs |
 
 ## Known Constraints & Limitations
 
-- **GitHub Pages**: Static files only; no backend for heavy processing
-- **Browser Compatibility**: Requires modern browser with Canvas API (IE11 not supported)
-- **Image Limits**: Max 2000×2000px upload; larger images auto-downsampled
-- **PDF Vector Limits**: Export uses rasterized image, not vector circles (for file size)
-- **Mobile Performance**: Very large images may be slow/memory-intensive on older mobile devices
-- **GIF Animation**: Only first frame exported (animated GIFs not supported)
-- **SVG Input**: SVG images not supported (rasterizes to bitmap)
-
----
+- Static files only (GitHub Pages)
+- Max upload 2000×2000; larger images are rejected, not downsampled
+- GIFs use the first frame; SVG is not supported
+- PDF contains a raster image, not vector circles
 
 ## Future Enhancements (Post-MVP)
 
-- [ ] Batch export multiple images
-- [ ] Custom color circles (not just black)
-- [ ] Different circle shape modes (dots, dashes, etc.)
-- [ ] Undo/Redo functionality
-- [ ] Save settings presets
-- [ ] Share circle art as image or link
-- [ ] Progressive Web App (PWA) offline support
+- Custom circle colors
+- Other shape modes (dots, dashes)
+- Settings presets / remember last settings
+- Undo/redo
+- Batch export
+- PWA offline support

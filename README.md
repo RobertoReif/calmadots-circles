@@ -6,12 +6,14 @@ Convert images into stunning circle-based visualizations where pixel darkness is
 
 - **Image Upload**: Drag & drop or select JPG, PNG, WebP, or GIF images
 - **Grayscale Conversion**: Automatic grayscale preview
-- **Image Resizing**: Resize images (50–2000px width) with aspect ratio preservation
-- **Circle Visualization**: Convert pixels to hollow circles with customizable parameters
+- **Crop**: Drag to select a US Letter (8.5×11) portrait or landscape crop
+- **Resolution**: Long-edge slider (10–500 pixels, default 250) sets how many circles span the image
+- **Circle Visualization**: Convert pixels to circles with customizable parameters
   - Min/Max circle radius (1–30px)
   - Stroke width (1–3px)
-  - Circle spacing (0–5px gap)
-- **PDF Export**: Download circle art as high-quality PDF
+  - Spacing (sample every pixel, or skip up to 5)
+  - Outline or filled circles
+- **PDF Export**: Download a US Letter PDF with the artwork centered inside a 0.1in margin
 - **Responsive Design**: Works on desktop, tablet, and mobile devices
 - **No Backend**: All processing happens in your browser—no data sent to servers
 
@@ -35,17 +37,17 @@ Visit: https://robertoreif.github.io/calmadots-circles/
 ## Usage
 
 1. **Upload**: Click or drag an image onto the upload area
-2. **Preview**: View the grayscale preview and adjust image size if needed
-3. **Configure**: Adjust circle size, stroke width, and spacing
-4. **Visualize**: Watch the circle visualization update in real-time
-5. **Export**: Download as PDF with optional metadata
+2. **Preview & crop**: View the grayscale preview and optionally crop to Letter proportions
+3. **Configure**: Adjust circle size, stroke width, spacing and long edge
+4. **Visualize**: The circle visualization re-renders after each change
+5. **Export**: Download as PDF
 
 ## Technical Stack
 
 - **Markup**: HTML5 (semantic structure)
 - **Styling**: CSS3 (system fonts, responsive design)
 - **Image Processing**: HTML5 Canvas API
-- **PDF Export**: jsPDF (loaded from CDN)
+- **PDF Export**: pdf-lib (loaded from CDN)
 - **Deployment**: GitHub Pages (static files)
 
 ## Architecture
@@ -60,8 +62,13 @@ CircleSize/
 │   ├── app.js              # Main application
 │   ├── imageProcessor.js   # Image loading & grayscale conversion
 │   ├── canvas.js           # Circle visualization rendering
-│   └── pdfExporter.js      # PDF export functionality
-├── assets/                 # Images, icons, etc.
+│   └── pdflibExporter.js   # PDF export (pdf-lib)
+├── docs/                   # GitHub Pages copy (scripts/sync-docs.sh)
+├── scripts/
+│   ├── sync-docs.sh        # Mirror src/js/css into docs/ (--check to verify)
+│   └── run-tests.sh        # Headless Chrome tests
+├── test/
+│   └── app.test.js         # End-to-end checks
 ├── spec.md                 # Project specification
 └── PROJECT_PLAN.md         # Implementation plan
 ```
@@ -70,7 +77,7 @@ CircleSize/
 
 ### Circle Sizing Formula
 
-For each pixel in the grayscale image:
+For each sampled pixel in the downsampled grayscale image:
 
 ```
 normalized_darkness = (255 - pixel_grayscale_value) / 255
@@ -83,9 +90,9 @@ Where:
 
 ### Rendering
 
-- Each pixel becomes a hollow circle (black stroke, transparent fill)
-- Circles are rendered at pixel positions with calculated radii
-- Optional spacing between circles for visual effect
+- Circle centers sit on a grid with pitch `2 × max_radius`, so the largest circles touch but never overlap
+- Each circle is a black outline (or solid when "Fill circles" is on); lighter circles get thinner strokes
+- Spacing samples every (spacing + 1)th pixel, leaving gaps
 
 ## Browser Compatibility
 
@@ -96,17 +103,16 @@ Where:
 
 **Not supported**: Internet Explorer 11
 
-## Performance
+## Limits
 
-- **Processing time** (typical): <2 seconds for 1000×1000px image
-- **PDF generation**: <3 seconds
-- **Max image size**: 2000×2000px (auto-downsampled for PDF export)
+- **Max upload**: 2000×2000px (larger images are rejected)
+- **Canvas size**: if the circle image would exceed the browser's canvas limit (notably on iPhone/iPad), the long edge is lowered automatically
 
 ## Known Limitations
 
 - GIF images: Only first frame is used (animation not supported)
 - SVG images: Not supported (rasterizes to bitmap)
-- Very large images (>1000×1000px) may be slow on older mobile devices
+- High long-edge values render slowly on older mobile devices
 - PDF uses rasterized circles (not vectors) for optimal file size
 
 ## Customization
@@ -129,9 +135,15 @@ this.config = {
     minRadius: 1,      // pixels
     maxRadius: 15,     // pixels
     strokeWidth: 2,    // pixels
-    spacing: 0,        // pixels
+    spacing: 0,        // pixels skipped between samples
 };
 ```
+The default long edge is set in `js/app.js` and on the slider in `src/index.html`.
+
+## Development
+
+- Edit `src/index.html`, `js/` and `css/`, then run `scripts/sync-docs.sh` to update `docs/` (served by GitHub Pages)
+- Run `scripts/run-tests.sh` (needs Google Chrome and network access for pdf-lib)
 
 ## Contributing
 
