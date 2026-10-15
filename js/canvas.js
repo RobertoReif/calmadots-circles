@@ -11,7 +11,6 @@ class CircleVisualizer {
             strokeWidth: 2,
             spacing: 0,
         };
-        this.lastRenderPadding = 0; // Store padding from last render
     }
 
     /**
@@ -62,28 +61,23 @@ class CircleVisualizer {
         const minDistanceBetweenCenters = 2 * this.config.maxRadius;
         const autoScale = userScale || minDistanceBetweenCenters;
 
-        const scaledWidth = width * autoScale;
-        const scaledHeight = height * autoScale;
-
-        // Add substantial padding to canvas to prevent circles at edges from being clipped
-        // Account for both radius and stroke width which extends beyond the radius
-        // Use a generous safety margin to ensure ALL circles fit completely
-        const maxCircleExtent = (this.config.maxRadius + this.config.strokeWidth) * autoScale;
-        const paddingPixels = Math.ceil(maxCircleExtent) + 50; // 50px extra safety margin
-
-        // Store padding for later use when cropping canvas for display
-        this.lastRenderPadding = paddingPixels;
+        // Size the canvas to exactly fit the artwork: centers span (n-1) * autoScale,
+        // plus room for the largest circle (radius + half its stroke) on every side.
+        // Stroke widths are rounded up per circle, so use the rounded-up max stroke.
+        const edgeMargin = Math.ceil(this.config.maxRadius + Math.ceil(this.config.strokeWidth) / 2) + 1;
+        const scaledWidth = (width - 1) * autoScale;
+        const scaledHeight = (height - 1) * autoScale;
 
         console.log('[renderCircles] Starting render:', {
             originalDimensions: `${width}x${height}`,
             autoScale,
             scaledDimensions: `${scaledWidth}x${scaledHeight}`,
-            paddingPixels: paddingPixels,
+            edgeMargin,
             config: this.config
         });
 
-        canvas.width = scaledWidth + (paddingPixels * 2);
-        canvas.height = scaledHeight + (paddingPixels * 2);
+        canvas.width = scaledWidth + (edgeMargin * 2);
+        canvas.height = scaledHeight + (edgeMargin * 2);
 
         console.log('[renderCircles] Canvas dimensions after setting:', {
             canvasWidth: canvas.width,
@@ -137,9 +131,9 @@ class CircleVisualizer {
                         // Scale position only (not radius)
                         // This ensures circles are spaced far enough apart to not overlap
                         // while keeping their relative size differences
-                        // Offset by padding to prevent edge circles from being clipped
-                        const scaledX = x * autoScale + paddingPixels;
-                        const scaledY = y * autoScale + paddingPixels;
+                        // Offset by edge margin so edge circles are not clipped
+                        const scaledX = x * autoScale + edgeMargin;
+                        const scaledY = y * autoScale + edgeMargin;
 
                         // Draw circle at scaled position with original radius
                         ctx.beginPath();
@@ -191,36 +185,6 @@ class CircleVisualizer {
             console.log('[renderCircles] Starting chunked rendering with CHUNK_HEIGHT=50');
             requestAnimationFrame(renderChunk);
         });
-    }
-
-    /**
-     * Get canvas cropped to remove the padding added for edge protection
-     * @param {HTMLCanvasElement} canvas - Canvas element
-     * @returns {HTMLCanvasElement} Cropped canvas without padding
-     */
-    getCroppedCanvas(canvas) {
-        if (this.lastRenderPadding === 0) {
-            return canvas; // No padding to remove
-        }
-
-        const padding = this.lastRenderPadding;
-        const croppedWidth = canvas.width - (padding * 2);
-        const croppedHeight = canvas.height - (padding * 2);
-
-        const croppedCanvas = document.createElement('canvas');
-        croppedCanvas.width = croppedWidth;
-        croppedCanvas.height = croppedHeight;
-
-        const ctx = croppedCanvas.getContext('2d');
-        ctx.drawImage(
-            canvas,
-            padding, padding, // Source position (top-left of content)
-            croppedWidth, croppedHeight, // Source size
-            0, 0, // Destination position
-            croppedWidth, croppedHeight // Destination size
-        );
-
-        return croppedCanvas;
     }
 
     /**

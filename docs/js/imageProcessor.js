@@ -6,7 +6,7 @@
 class ImageProcessor {
     constructor() {
         this.image = null;
-        this.originalCroppedImage = null; // High-res original after cropping (before any resizing)
+        this.originalCroppedImage = null; // Full-res source (uploaded image, or latest crop of it) before any resizing
         this.grayscaleData = null;
         this.originalWidth = 0;
         this.originalHeight = 0;
@@ -55,6 +55,7 @@ class ImageProcessor {
 
                 // Validation passed, store image data
                 this.image = img;
+                this.originalCroppedImage = img;
                 this.originalWidth = img.width;
                 this.originalHeight = img.height;
                 this.currentWidth = img.width;
@@ -183,9 +184,9 @@ class ImageProcessor {
             throw new Error('Could not get canvas context');
         }
 
-        // Draw cropped region
+        // Draw cropped region from the full-res source (this.image may be downsampled)
         ctx.drawImage(
-            this.image,
+            this.originalCroppedImage || this.image,
             cropX, cropY, cropWidth, cropHeight,
             0, 0, cropWidth, cropHeight
         );

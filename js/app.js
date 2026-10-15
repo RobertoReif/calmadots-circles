@@ -346,10 +346,9 @@ class CircleSizeApp {
             const endX = Math.max(this.cropSelection.startX, this.cropSelection.endX);
             const endY = Math.max(this.cropSelection.startY, this.cropSelection.endY);
 
-            // Selection canvas internal size should match grayscale canvas internal size
-            // Scale from canvas pixels to image processor coordinates
-            const scaleX = this.imageProcessor.currentWidth / this.grayscaleCanvas.width;
-            const scaleY = this.imageProcessor.currentHeight / this.grayscaleCanvas.height;
+            // Scale from selection canvas pixels to full-resolution source coordinates
+            const scaleX = this.imageProcessor.originalWidth / this.selectionCanvas.width;
+            const scaleY = this.imageProcessor.originalHeight / this.selectionCanvas.height;
 
             const customCropArea = {
                 x: Math.round(startX * scaleX),
@@ -399,6 +398,8 @@ class CircleSizeApp {
         try {
             this.showMessage(this.uploadStatus, 'Converting to grayscale...', 'info');
 
+            // Downsample to the long-edge setting before rendering; full-res stays available for cropping
+            await this.imageProcessor.resizeByLongEdge(this.longEdgePixels);
             await this.imageProcessor.convertToGrayscale();
             this.imageProcessor.drawGrayscalePreview(this.grayscaleCanvas);
 
@@ -426,8 +427,7 @@ class CircleSizeApp {
     initializeSelectionCanvas() {
         if (!this.selectionCanvas) return;
 
-        // Calculate a reasonable display size that fits on screen
-        // Max 500px on the long edge, maintain aspect ratio
+        // Display at 500px on the long edge (scaling small images up), maintain aspect ratio
         const grayscaleWidth = this.grayscaleCanvas.width;
         const grayscaleHeight = this.grayscaleCanvas.height;
         const maxDisplay = 500;
@@ -437,11 +437,11 @@ class CircleSizeApp {
 
         if (aspect > 1) {
             // Wider than tall
-            displayWidth = Math.min(maxDisplay, grayscaleWidth);
+            displayWidth = maxDisplay;
             displayHeight = Math.round(displayWidth / aspect);
         } else {
             // Taller than wide
-            displayHeight = Math.min(maxDisplay, grayscaleHeight);
+            displayHeight = maxDisplay;
             displayWidth = Math.round(displayHeight * aspect);
         }
 
@@ -538,16 +538,6 @@ class CircleSizeApp {
             );
             console.log('[app.renderCircles] Visualization rendering complete');
 
-            // Create a cropped version of the canvas without padding for display in Step 4
-            const croppedCanvas = this.visualizer.getCroppedCanvas(this.circleCanvas);
-            const displayCanvas = this.circleCanvas.parentElement;
-
-            // Copy the cropped canvas dimensions and content to the display canvas
-            this.circleCanvas.width = croppedCanvas.width;
-            this.circleCanvas.height = croppedCanvas.height;
-            const ctx = this.circleCanvas.getContext('2d');
-            ctx.drawImage(croppedCanvas, 0, 0);
-
             this.processingStatus.style.display = 'none';
         } catch (error) {
             console.error('[app.renderCircles] Error:', error);
@@ -575,6 +565,7 @@ class CircleSizeApp {
             // Update grayscale preview
             await this.imageProcessor.convertToGrayscale();
             this.imageProcessor.drawGrayscalePreview(this.grayscaleCanvas);
+            this.initializeSelectionCanvas();
 
             // Re-render circles with new dimensions
             await this.renderCircles();
@@ -590,7 +581,7 @@ class CircleSizeApp {
         if (!this.pdfExporter.isLibraryLoaded()) {
             this.showMessage(
                 this.exportStatus,
-                'jsPDF library not loaded. Please refresh the page.',
+                'PDF library not loaded. Please refresh the page.',
                 'error'
             );
             return;
