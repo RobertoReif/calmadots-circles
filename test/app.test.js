@@ -104,6 +104,16 @@ window.addEventListener('load', async () => {
         ok(app.circleCanvas.width * app.circleCanvas.height <= 16777216 && app.longEdgePixels < 500,
             `iOS long edge lowered to ${app.longEdgePixels}, canvas ${app.circleCanvas.width}x${app.circleCanvas.height}`);
 
+        // A large upload is downsampled to a 2000px long edge, not rejected
+        const big = document.createElement('canvas');
+        big.width = 4000; big.height = 3000;
+        big.getContext('2d').fillRect(0, 0, 2000, 3000);
+        const bigBlob = await new Promise(r => big.toBlob(r, 'image/png'));
+        await app.handleImageUpload({ target: { files: [new File([bigBlob], 'big.png', { type: 'image/png' })] } });
+        ok(await idle(), 'large upload render finished: ' + app.uploadStatus.textContent);
+        ok(ip.originalWidth === 2000 && ip.originalHeight === 1500 && app.grayscaleCanvas.width === 2000,
+            `large upload downsampled to ${ip.originalWidth}x${ip.originalHeight}: ${app.metaDimensions.textContent}`);
+
         // A corrupt file reports an error instead of hanging
         await app.handleImageUpload({ target: { files: [new File([new Uint8Array([1, 2, 3])], 'bad.png', { type: 'image/png' })] } });
         ok(/Failed/.test(app.uploadStatus.textContent), 'bad file reports error: ' + app.uploadStatus.textContent);

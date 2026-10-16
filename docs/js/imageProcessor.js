@@ -46,24 +46,33 @@ class ImageProcessor {
                     return;
                 }
 
-                // Check max dimensions
-                if (img.width > 2000 || img.height > 2000) {
-                    reject(new Error(`Image too large (${img.width}×${img.height}px). Max: 2000×2000px`));
-                    return;
+                // Downsample large images so the long edge is at most MAX_SOURCE_EDGE
+                const scale = Math.min(1, ImageProcessor.MAX_SOURCE_EDGE / Math.max(img.width, img.height));
+                const width = Math.max(1, Math.round(img.width * scale));
+                const height = Math.max(1, Math.round(img.height * scale));
+
+                if (scale < 1) {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.imageSmoothingQuality = 'high';
+                    ctx.drawImage(img, 0, 0, width, height);
+                    this.sourceImage = canvas;
+                } else {
+                    this.sourceImage = img;
                 }
+                this.originalWidth = width;
+                this.originalHeight = height;
+                this.currentWidth = width;
+                this.currentHeight = height;
 
-                // Validation passed, store image data
-                this.sourceImage = img;
-                this.originalWidth = img.width;
-                this.originalHeight = img.height;
-                this.currentWidth = img.width;
-                this.currentHeight = img.height;
-
-                // Store metadata for later retrieval
+                // Store metadata for later retrieval (width/height are the uploaded file's dimensions)
                 this.metadata = {
                     filename: file.name,
                     width: img.width,
                     height: img.height,
+                    downsampled: scale < 1 ? { width, height } : null,
                     size: this._formatFileSize(file.size),
                 };
 
@@ -312,6 +321,9 @@ class ImageProcessor {
         return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
     }
 }
+
+// Uploads larger than this on their long edge are downsampled to it
+ImageProcessor.MAX_SOURCE_EDGE = 2000;
 
 // Export for use in other modules
 if (typeof module !== 'undefined' && module.exports) {

@@ -157,7 +157,9 @@ class CircleSizeApp {
             // Show metadata
             const metadata = this.imageProcessor.getMetadata();
             this.metaFilename.textContent = file.name;
-            this.metaDimensions.textContent = `${metadata.width} × ${metadata.height} px`;
+            this.metaDimensions.textContent = metadata.downsampled
+                ? `${metadata.width} × ${metadata.height} px (downsampled to ${metadata.downsampled.width} × ${metadata.downsampled.height})`
+                : `${metadata.width} × ${metadata.height} px`;
             this.metaSize.textContent = metadata.size;
             this.imageMetadata.style.display = 'block';
 

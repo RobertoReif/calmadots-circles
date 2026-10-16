@@ -33,7 +33,7 @@ Status key: ✅ done · 🔶 in progress / partly done · ⬜ not started
 
 ## Phase 2: Image Upload & Processing ✅
 - ✅ File input with drag and drop; JPG/PNG/WebP/GIF only
-- ✅ Reject images outside 10×10 – 2000×2000
+- ✅ Reject images under 10×10; downsample uploads with a long edge over 2000px to 2000px
 - ✅ Grayscale `0.299R + 0.587G + 0.114B`; transparent pixels composited onto white
 - ✅ Metadata display (filename, dimensions, size)
 - ✅ Load/decode failures show an error instead of hanging
@@ -121,6 +121,7 @@ Before pushing to `master` (which deploys Pages):
 | 2026-10-15 | Default long edge 250 with an automatic canvas-limit cap | More detail by default without blank canvases on iOS |
 | 2026-10-15 | Defaults changed to min radius 5, max radius 30, long edge 100 | Requested by the project owner |
 | 2026-10-15 | Cancel stale renders instead of Web Workers | Fixes dropped/mixed slider updates; workers not needed at current sizes |
+| 2026-10-16 | Downsample uploads over 2000px instead of rejecting | Phone photos are usually larger than 2000px; 2000px is plenty for preview, crop and up to 500 circles |
 
 ## Risks
 
@@ -136,7 +137,7 @@ Before pushing to `master` (which deploys Pages):
 ## Known Constraints & Limitations
 
 - Static files only (GitHub Pages)
-- Max upload 2000×2000; larger images are rejected, not downsampled
+- Uploads are capped at 2000px on the long edge (larger images are downsampled); very large files may still fail to decode on low-memory devices
 - GIFs use the first frame; SVG is not supported
 - PDF contains a raster image, not vector circles
 

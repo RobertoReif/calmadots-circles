@@ -14,7 +14,7 @@ Units: **px** below means canvas pixels of the rendered circle image unless stat
 
 ### Image Upload & Processing
 - Accept JPG, PNG, WebP and GIF (first frame only). Other types, including SVG, are rejected with an error.
-- Images must be between 10×10 and 2000×2000 source pixels. Images outside that range are rejected with an error (they are not downsampled).
+- Images smaller than 10×10 are rejected with an error. Images whose long edge exceeds 2000 px are downsampled (aspect ratio preserved) so the long edge is 2000 px; this becomes the full-resolution source for the preview and crop. The metadata shows both the uploaded and downsampled dimensions.
 - A file that fails to load or decode shows an error; the app never hangs waiting for it.
 - Show image metadata after upload: filename, original dimensions, file size.
 - Convert to grayscale with `gray = round(0.299*R + 0.587*G + 0.114*B)`. Transparent pixels are composited onto white first, so they read as white.

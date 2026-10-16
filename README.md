@@ -105,7 +105,7 @@ Where:
 
 ## Limits
 
-- **Max upload**: 2000×2000px (larger images are rejected)
+- **Large uploads**: images with a long edge over 2000px are downsampled to 2000px
 - **Canvas size**: if the circle image would exceed the browser's canvas limit (notably on iPhone/iPad), the long edge is lowered automatically
 
 ## Known Limitations
