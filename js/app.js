@@ -540,7 +540,7 @@ class CircleSizeApp {
      * Reset configuration to defaults
      */
     async resetToDefaults() {
-        this.minRadiusSlider.value = 1;
+        this.minRadiusSlider.value = 0;
         this.maxRadiusSlider.value = 15;
         this.strokeWidthSlider.value = 2;
         this.spacingSlider.value = 0;

@@ -40,6 +40,7 @@ Terms: the **source image** is the upload (capped at 2000 px on its long edge) o
   circle_radius = min_radius + (normalized_darkness * (max_radius - min_radius))
   ```
   - Black (0) → `max_radius`; mid-gray (127) → about halfway; white (255) → `min_radius`.
+  - Circles with radius < 0.5 px are not drawn. With the default min radius 0, white and near-white pixels leave blank space.
   - Because the pitch is `2 × max_radius`, the largest filled circles touch their neighbours. In outline mode the outlines of the largest neighbouring circles overlap by up to `stroke_width` px. The ranges below keep min radius below max radius.
 - **Stroke:** `stroke = max(1, normalized_darkness × stroke_width)` px, so lighter circles get thinner outlines (minimum 1 px).
 - **Style:** outline on a white background by default. A **Fill circles** checkbox draws solid circles instead (no stroke).
@@ -49,7 +50,7 @@ Terms: the **source image** is the upload (capped at 2000 px on its long edge) o
 
   | Parameter | Range | Step | Default |
   |---|---|---|---|
-  | Min circle radius | 1–5 px | 1 | 1 |
+  | Min circle radius | 0–5 px | 1 | 0 |
   | Max circle radius | 10–30 px | 1 | 15 |
   | Stroke width | 1–3 px | 0.5 | 2 |
   | Spacing | 0–5 | 1 | 0 |
@@ -169,7 +170,7 @@ js/pdflibExporter.js  PDFLibExporter: Letter page layout and PNG embedding
 Automated checks live in `test/app.test.js` (run `scripts/run-tests.sh`); their result labels start with the criterion number. The rest are manual.
 
 1. **Upload downsampling:** given a 1500×1000 PNG uploaded with defaults, the grid is 100×67 and the circle canvas is exactly 3004×2014. *(automated)*
-2. **No clipping:** given an all-black 4×3 image, the outermost circles on all four sides are drawn whole and no ink touches the canvas border, at stroke 2, stroke 3 and in fill mode. *(automated)*
+2. **No clipping:** given an all-black 4×3 image, the outermost circles on all four sides are drawn whole and no ink touches the canvas border, at stroke 2, stroke 3 and in fill mode. Given an all-white image at the default min radius 0, nothing is drawn. *(automated)*
 3. **Transparency:** a fully transparent pixel has grayscale 255. *(automated)*
 4. **Latest settings win:** starting a render cancels any render in progress; after rapid long-edge changes and a max-radius change mid-render, the final canvas matches the last values (4804×3204 for long edge 120, max radius 20). *(automated)*
 5. **PDF page:** a landscape render exports one 792×612 pt page; after a portrait crop, the export is 612×792 pt. Download is disabled while a render runs. *(automated)* The artwork is centered with 7.2 pt margins on the limiting sides. *(manual)*

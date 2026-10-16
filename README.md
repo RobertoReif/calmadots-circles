@@ -9,7 +9,7 @@ Convert images into stunning circle-based visualizations where pixel darkness is
 - **Crop**: Drag to select a US Letter (8.5×11) portrait or landscape crop
 - **Resolution**: Long-edge slider (10–500 pixels, default 100) sets how many circles span the image
 - **Circle Visualization**: Convert pixels to circles with customizable parameters
-  - Min circle radius (1–5px) and max circle radius (10–30px)
+  - Min circle radius (0–5px; 0 means white areas stay blank) and max circle radius (10–30px)
   - Stroke width (1–3px)
   - Spacing (sample every pixel, or skip up to 5)
   - Outline or filled circles
@@ -131,7 +131,7 @@ Edit CSS variables in `css/styles.css`:
 Modify default values in `js/canvas.js`:
 ```javascript
 this.config = {
-    minRadius: 1,      // pixels
+    minRadius: 0,      // pixels (0 = white pixels draw no circle)
     maxRadius: 15,     // pixels
     strokeWidth: 2,    // pixels
     spacing: 0,        // pixels skipped between samples

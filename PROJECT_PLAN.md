@@ -127,6 +127,7 @@ Before pushing to `master` (which deploys Pages). Run scripts with `sh` because 
 | 2026-10-15 | Step 2 preview shown at full resolution | The downsampled grid looked blurry when scaled up for cropping |
 | 2026-10-16 | Downsample uploads over 2000px instead of rejecting | Phone photos are usually larger than 2000px; 2000px is plenty for preview, crop and up to 500 circles |
 | 2026-10-16 | Default radii back to min 1, max 15 (long edge stays 100) | Requested by the project owner; default canvas ≈ 3,000 px, within iOS limits |
+| 2026-10-16 | Min radius range 0–5, default 0 | Requested by the project owner: white pixels draw no circle |
 | 2026-10-16 | Circle color picker; one color for stroke and fill; white background | Requested by the project owner |
 | 2026-10-16 | Crop selection uses Pointer Events | Mouse-only selection made cropping impossible on touch devices |
 | 2026-10-16 | Export disabled during renders; orientation from the rendered canvas | Exporting mid-render could pair a new orientation with the old artwork |

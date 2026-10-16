@@ -87,6 +87,16 @@ window.addEventListener('load', async () => {
             ok(!borderInk && edges, `AC2 ${label}: edge circles whole on all four sides, none clipped`);
         }
 
+        // AC2: at the default min radius 0, white pixels draw nothing
+        {
+            const v = new CircleVisualizer();
+            const processor = { getDimensions: () => ({ width: 4, height: 3 }), grayscaleData: new Uint8ClampedArray(4 * 3 * 4).fill(255) };
+            const c = document.createElement('canvas');
+            await v.renderCircles(c, processor);
+            const d = c.getContext('2d').getImageData(0, 0, c.width, c.height).data;
+            ok(v.config.minRadius === 0 && d.every(value => value === 255), 'AC2 white pixels draw no circle at min radius 0');
+        }
+
         // Upload: 1500x1000, left half transparent, right half black
         const src = document.createElement('canvas');
         src.width = 1500; src.height = 1000;
