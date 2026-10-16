@@ -307,6 +307,8 @@ a:hover {
     left: 0;
     /* Don't use % sizing - let JavaScript handle dimensions */
     cursor: crosshair;
+    /* Let touch drags draw a selection instead of scrolling the page */
+    touch-action: none;
     border-radius: 4px;
     display: block;
 }

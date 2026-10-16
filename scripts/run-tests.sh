@@ -16,11 +16,11 @@ sed -e "s#\.\./js/#file://$ROOT/js/#g" \
     src/index.html > "$TMP/index.html"
 
 "$CHROME" --headless=new --allow-file-access-from-files --disable-gpu \
-    --virtual-time-budget=180000 --dump-dom "file://$TMP/index.html" 2>/dev/null \
+    --virtual-time-budget=3600000 --dump-dom "file://$TMP/index.html" 2>/dev/null \
     | sed -n '/<pre id="results">/,/<\/pre>/p' | sed -e 's#<pre id="results">##' -e 's#</pre>.*##' > "$TMP/results.txt"
 
 cat "$TMP/results.txt"
-if [ ! -s "$TMP/results.txt" ] || grep -q "^FAIL\|^ERROR" "$TMP/results.txt"; then
+if ! grep -q "^DONE" "$TMP/results.txt" || grep -q "^FAIL\|^ERROR" "$TMP/results.txt"; then
     echo "Tests failed"
     exit 1
 fi

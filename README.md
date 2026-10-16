@@ -9,13 +9,13 @@ Convert images into stunning circle-based visualizations where pixel darkness is
 - **Crop**: Drag to select a US Letter (8.5×11) portrait or landscape crop
 - **Resolution**: Long-edge slider (10–500 pixels, default 100) sets how many circles span the image
 - **Circle Visualization**: Convert pixels to circles with customizable parameters
-  - Min/Max circle radius (1–30px)
+  - Min circle radius (1–5px) and max circle radius (10–30px)
   - Stroke width (1–3px)
   - Spacing (sample every pixel, or skip up to 5)
   - Outline or filled circles
   - Circle color picker
 - **PDF Export**: Download a US Letter PDF with the artwork centered inside a 0.1in margin
-- **Responsive Design**: Works on desktop, tablet, and mobile devices
+- **Responsive Design**: Works on desktop, tablet, and mobile devices; crop selection works with mouse, touch or pen
 - **No Backend**: All processing happens in your browser—no data sent to servers
 
 ## Getting Started
@@ -92,15 +92,12 @@ Where:
 ### Rendering
 
 - Circle centers sit on a grid with pitch `2 × max_radius`, so the largest circles touch but never overlap
-- Each circle is a black outline (or solid when "Fill circles" is on); lighter circles get thinner strokes
+- Each circle is an outline in the chosen color (black by default), or solid when "Fill circles" is on; lighter circles get thinner strokes
 - Spacing samples every (spacing + 1)th pixel, leaving gaps
 
 ## Browser Compatibility
 
-- Chrome/Edge (latest)
-- Firefox (latest)
-- Safari 14+
-- Mobile: iOS Safari 12+, Chrome Android 90+
+Targets current versions of Chrome, Edge, Firefox and Safari (macOS and iOS). Automated tests run in headless Chrome; other browsers have not been tested yet.
 
 **Not supported**: Internet Explorer 11
 
@@ -112,9 +109,10 @@ Where:
 ## Known Limitations
 
 - GIF images: Only first frame is used (animation not supported)
-- SVG images: Not supported (rasterizes to bitmap)
+- SVG images: Not supported (rejected on upload)
 - High long-edge values render slowly on older mobile devices
 - PDF uses rasterized circles (not vectors) for optimal file size
+- No offline use: the PDF library loads from a CDN
 
 ## Customization
 

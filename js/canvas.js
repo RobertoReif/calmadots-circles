@@ -109,51 +109,60 @@ class CircleVisualizer {
         const CHUNK_HEIGHT = 50;
         let currentY = 0;
 
-        return new Promise((resolve) => {
+        return new Promise((resolve, reject) => {
             const renderChunk = () => {
-                if (token !== this.renderToken) {
-                    resolve(false);
-                    return;
-                }
-
-                const chunkEndY = Math.min(currentY + CHUNK_HEIGHT * pixelStep, height);
-
-                for (let y = currentY; y < chunkEndY; y += pixelStep) {
-                    for (let x = 0; x < width; x += pixelStep) {
-                        const pixelValue = grayscale[(y * width + x) * 4];
-                        const { radius, strokeWidth } = this.getCircleProperties(pixelValue, config);
-
-                        // Skip circles too small to see
-                        if (radius < 0.5) {
-                            continue;
-                        }
-
-                        // Scale position only (not radius) so circles keep their relative sizes
-                        ctx.beginPath();
-                        ctx.arc(x * pitch + edgeMargin, y * pitch + edgeMargin, radius, 0, 2 * Math.PI);
-
-                        if (fillCircles) {
-                            ctx.fill();
-                        } else {
-                            ctx.lineWidth = strokeWidth;
-                            ctx.stroke();
-                        }
+                try {
+                    if (token !== this.renderToken) {
+                        resolve(false);
+                        return;
                     }
-                    processedRows++;
-                }
 
-                if (onProgress) {
-                    onProgress(Math.min(100, Math.round((processedRows / totalRows) * 100)));
-                }
+                    const chunkEndY = Math.min(currentY + CHUNK_HEIGHT * pixelStep, height);
 
-                if (chunkEndY < height) {
-                    currentY = chunkEndY;
-                    requestAnimationFrame(renderChunk);
-                } else {
-                    canvas.width = canvasWidth;
-                    canvas.height = canvasHeight;
-                    canvas.getContext('2d').drawImage(offscreen, 0, 0);
-                    resolve(true);
+                    for (let y = currentY; y < chunkEndY; y += pixelStep) {
+                        for (let x = 0; x < width; x += pixelStep) {
+                            const pixelValue = grayscale[(y * width + x) * 4];
+                            const { radius, strokeWidth } = this.getCircleProperties(pixelValue, config);
+
+                            // Skip circles too small to see
+                            if (radius < 0.5) {
+                                continue;
+                            }
+
+                            // Scale position only (not radius) so circles keep their relative sizes
+                            ctx.beginPath();
+                            ctx.arc(x * pitch + edgeMargin, y * pitch + edgeMargin, radius, 0, 2 * Math.PI);
+
+                            if (fillCircles) {
+                                ctx.fill();
+                            } else {
+                                ctx.lineWidth = strokeWidth;
+                                ctx.stroke();
+                            }
+                        }
+                        processedRows++;
+                    }
+
+                    if (onProgress) {
+                        onProgress(Math.min(100, Math.round((processedRows / totalRows) * 100)));
+                    }
+
+                    if (chunkEndY < height) {
+                        currentY = chunkEndY;
+                        requestAnimationFrame(renderChunk);
+                    } else {
+                        canvas.width = canvasWidth;
+                        canvas.height = canvasHeight;
+                        const targetCtx = canvas.getContext('2d');
+                        if (!targetCtx) {
+                            throw new Error('Could not get canvas context (the image may be too large for this device)');
+                        }
+                        targetCtx.drawImage(offscreen, 0, 0);
+                        resolve(true);
+                    }
+                } catch (error) {
+                    // An exception inside an animation frame would otherwise leave the promise pending
+                    reject(error);
                 }
             };
 

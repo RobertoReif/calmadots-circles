@@ -70,7 +70,6 @@ class CircleSizeApp {
 
         // Export section
         this.exportSection = document.getElementById('exportSection');
-        this.includeMetadata = document.getElementById('includeMetadata');
         this.exportButton = document.getElementById('exportButton');
         this.exportStatus = document.getElementById('exportStatus');
     }
@@ -91,8 +90,9 @@ class CircleSizeApp {
         this.cropOrientationRadios.forEach((radio) => {
             radio.addEventListener('change', (e) => {
                 this.currentCropOrientation = e.target.value;
-                // Redraw selection with new aspect ratio
+                // Reshape the existing selection to the new aspect ratio
                 if (this.cropSelection) {
+                    this.constrainSelection(this.cropSelection.endX, this.cropSelection.endY);
                     this.drawSelectionRectangle();
                 }
             });
@@ -108,10 +108,11 @@ class CircleSizeApp {
 
         // Selection canvas
         if (this.selectionCanvas) {
-            this.selectionCanvas.addEventListener('mousedown', (e) => this.handleSelectionStart(e));
-            this.selectionCanvas.addEventListener('mousemove', (e) => this.handleSelectionDrag(e));
-            this.selectionCanvas.addEventListener('mouseup', (e) => this.handleSelectionEnd(e));
-            this.selectionCanvas.addEventListener('mouseleave', (e) => this.handleSelectionEnd(e));
+            // Pointer events cover mouse, touch and pen
+            this.selectionCanvas.addEventListener('pointerdown', (e) => this.handleSelectionStart(e));
+            this.selectionCanvas.addEventListener('pointermove', (e) => this.handleSelectionDrag(e));
+            this.selectionCanvas.addEventListener('pointerup', (e) => this.handleSelectionEnd(e));
+            this.selectionCanvas.addEventListener('pointercancel', (e) => this.handleSelectionEnd(e));
         }
 
         // Circle config sliders
@@ -173,6 +174,9 @@ class CircleSizeApp {
 
         } catch (error) {
             this.showMessage(this.uploadStatus, error.message, 'error');
+        } finally {
+            // Allow choosing the same file again (e.g. to undo a crop)
+            this.imageInput.value = '';
         }
     }
 
@@ -218,6 +222,14 @@ class CircleSizeApp {
         const x = (event.clientX - rect.left) * scaleX;
         const y = (event.clientY - rect.top) * scaleY;
 
+        // Keep receiving moves when the pointer leaves the canvas mid-drag
+        event.preventDefault();
+        try {
+            this.selectionCanvas.setPointerCapture(event.pointerId);
+        } catch (e) {
+            // Synthetic or already-released pointers can't be captured; dragging still works
+        }
+
         this.cropSelection = {
             startX: x,
             startY: y,
@@ -225,6 +237,7 @@ class CircleSizeApp {
             endY: y,
             isSelecting: true
         };
+        this.drawSelectionRectangle();
     }
 
     /**
@@ -241,20 +254,25 @@ class CircleSizeApp {
         let endX = (event.clientX - rect.left) * scaleX;
         let endY = (event.clientY - rect.top) * scaleY;
 
-        // Get the target aspect ratio based on current orientation
+        this.constrainSelection(endX, endY);
+        this.drawSelectionRectangle();
+    }
+
+    /**
+     * Set the selection's end point from (endX, endY), constrained to the current orientation's aspect ratio
+     */
+    constrainSelection(endX, endY) {
         const aspectRatios = {
             portrait: 8.5 / 11,    // width/height
             landscape: 11 / 8.5    // width/height
         };
         const targetRatio = aspectRatios[this.currentCropOrientation];
 
-        // Calculate raw dimensions
         const rawWidth = Math.abs(endX - this.cropSelection.startX);
         const rawHeight = Math.abs(endY - this.cropSelection.startY);
 
-        // Constrain to aspect ratio - use the larger dimension as reference
+        // Constrain to aspect ratio, keeping the selection inside the drag area
         let constrainedWidth, constrainedHeight;
-
         if (rawWidth / rawHeight > targetRatio) {
             // Width is too large, constrain by height
             constrainedHeight = rawHeight;
@@ -265,20 +283,9 @@ class CircleSizeApp {
             constrainedHeight = Math.round(rawWidth / targetRatio);
         }
 
-        // Update end coordinates to maintain aspect ratio
-        if (endX >= this.cropSelection.startX) {
-            this.cropSelection.endX = this.cropSelection.startX + constrainedWidth;
-        } else {
-            this.cropSelection.endX = this.cropSelection.startX - constrainedWidth;
-        }
-
-        if (endY >= this.cropSelection.startY) {
-            this.cropSelection.endY = this.cropSelection.startY + constrainedHeight;
-        } else {
-            this.cropSelection.endY = this.cropSelection.startY - constrainedHeight;
-        }
-
-        this.drawSelectionRectangle();
+        // Keep the drag direction
+        this.cropSelection.endX = this.cropSelection.startX + (endX >= this.cropSelection.startX ? constrainedWidth : -constrainedWidth);
+        this.cropSelection.endY = this.cropSelection.startY + (endY >= this.cropSelection.startY ? constrainedHeight : -constrainedHeight);
     }
 
     /**
@@ -549,7 +556,11 @@ class CircleSizeApp {
         if (!this.imageProcessor.grayscaleData) return;
 
         this.processingStatus.style.display = 'block';
+        this.processingStatus.classList.remove('error');
+        this.processingText.textContent = 'Rendering circles...';
         this.progressFill.style.width = '0%';
+        // Export uses the displayed canvas, so block it until this render completes
+        this.exportButton.disabled = true;
 
         try {
             // A newer render cancels this one (completed === false); it then owns the status UI
@@ -561,13 +572,10 @@ class CircleSizeApp {
             );
             if (completed) {
                 this.processingStatus.style.display = 'none';
+                this.exportButton.disabled = false;
             }
         } catch (error) {
-            this.showMessage(
-                this.processingStatus,
-                `Rendering error: ${error.message}`,
-                'error'
-            );
+            this.showProcessingError(`Rendering error: ${error.message}`);
         }
     }
 
@@ -579,7 +587,7 @@ class CircleSizeApp {
             this.prepareImage();
             await this.renderCircles();
         } catch (error) {
-            this.showMessage(this.processingStatus, `Resize error: ${error.message}`, 'error');
+            this.showProcessingError(`Resize error: ${error.message}`);
         }
     }
 
@@ -600,24 +608,9 @@ class CircleSizeApp {
         this.exportButton.disabled = true;
 
         try {
-            const metadata = {
-                imageWidth: this.imageProcessor.getDimensions().width,
-                imageHeight: this.imageProcessor.getDimensions().height,
-                minRadius: parseInt(this.minRadiusSlider.value, 10),
-                maxRadius: parseInt(this.maxRadiusSlider.value, 10),
-                strokeWidth: parseFloat(this.strokeWidthSlider.value),
-                spacing: parseInt(this.spacingSlider.value, 10),
-            };
-
             const result = await this.pdfExporter.exportToPDF(
                 this.circleCanvas,
-                `${this.currentFilename}-circles.pdf`,
-                {
-                    quality: 'standard',
-                    includeMetadata: this.includeMetadata.checked,
-                },
-                this.currentFilename,
-                metadata
+                `${this.currentFilename}-circles.pdf`
             );
 
             if (result.success) {
@@ -628,7 +621,8 @@ class CircleSizeApp {
         } catch (error) {
             this.showMessage(this.exportStatus, `Export error: ${error.message}`, 'error');
         } finally {
-            this.exportButton.disabled = false;
+            // Stay disabled if a render started during the export
+            this.exportButton.disabled = this.processingStatus.style.display !== 'none';
         }
     }
 
@@ -646,6 +640,16 @@ class CircleSizeApp {
         if (type === 'error' || type === 'success') {
             element.classList.add(type);
         }
+    }
+
+    /**
+     * Show an error in the processing status without removing its progress bar
+     */
+    showProcessingError(message) {
+        this.processingText.textContent = message;
+        this.processingStatus.classList.add('error');
+        this.processingStatus.style.display = 'block';
+        this.exportButton.disabled = false;
     }
 }
 

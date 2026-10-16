@@ -22,35 +22,27 @@ class PDFLibExporter {
     }
 
     /**
-     * Export circle visualization to PDF
+     * Export circle visualization to a US Letter PDF and download it
+     * @param {HTMLCanvasElement} canvas - Finished circle canvas
+     * @param {string} filename - Download filename
      */
-    async exportToPDF(
-        canvas,
-        filename = 'circlesize.pdf',
-        options = {},
-        originalFilename = 'image',
-        imageMetadata = null
-    ) {
+    async exportToPDF(canvas, filename = 'circlesize.pdf') {
         try {
             if (!this.pdfLibraryLoaded) {
                 return {
                     success: false,
-                    message: 'PDFLib library not loaded. Cannot export to PDF.',
+                    message: 'PDF library not loaded. Please refresh the page.',
                 };
             }
 
-            const defaultOptions = {
-                quality: 'standard',
-                includeMetadata: false,
-            };
+            // Snapshot the canvas before any await: orientation and pixels must come from the same render
+            const canvasWidth = canvas.width;
+            const canvasHeight = canvas.height;
+            const isLandscape = canvasWidth > canvasHeight;
+            const pngBlob = await new Promise((resolve, reject) => {
+                canvas.toBlob((blob) => (blob ? resolve(blob) : reject(new Error('Could not encode image'))), 'image/png');
+            });
 
-            const finalOptions = { ...defaultOptions, ...options };
-
-            // Determine PDF orientation based on actual image dimensions
-            const imageAspectRatio = imageMetadata.imageWidth / imageMetadata.imageHeight;
-            const isLandscape = imageAspectRatio > 1;
-
-            // Create PDF document with appropriate page size
             const pdfDoc = await this.PDFDocument.create();
 
             // US Letter in points (1 inch = 72 points), matching the crop aspect ratio
@@ -64,18 +56,16 @@ class PDFLibExporter {
             ]);
 
             // The circle canvas is rendered at its exact final size (edge margin included), so embed it as-is
-            const imageDataUrl = canvas.toDataURL('image/png');
-            const imageBytes = await fetch(imageDataUrl).then(res => res.arrayBuffer());
-            const pngImage = await pdfDoc.embedPng(imageBytes);
+            const pngImage = await pdfDoc.embedPng(await pngBlob.arrayBuffer());
 
             // Fit the artwork inside a 0.1 inch margin on all sides (all values in points)
             const marginPts = 0.1 * 72;
             const maxWidth = (isLandscape ? pageHeightPts : pageWidthPts) - (marginPts * 2);
             const maxHeight = (isLandscape ? pageWidthPts : pageHeightPts) - (marginPts * 2);
 
-            const fitScale = Math.min(maxWidth / canvas.width, maxHeight / canvas.height);
-            const imgWidth = canvas.width * fitScale;
-            const imgHeight = canvas.height * fitScale;
+            const fitScale = Math.min(maxWidth / canvasWidth, maxHeight / canvasHeight);
+            const imgWidth = canvasWidth * fitScale;
+            const imgHeight = canvasHeight * fitScale;
 
             // Calculate centered position (in points)
             const xPts = marginPts + ((maxWidth - imgWidth) / 2);
@@ -113,7 +103,8 @@ class PDFLibExporter {
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
-            URL.revokeObjectURL(url);
+            // Revoking immediately can cancel the download in Safari
+            setTimeout(() => URL.revokeObjectURL(url), 1000);
 
             return {
                 success: true,
