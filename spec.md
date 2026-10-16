@@ -29,7 +29,7 @@ Terms: the **source image** is the upload (capped at 2000 px on its long edge) o
 ### Resolution (Long Edge)
 - A **long edge** slider sets how many source pixels the image is downsampled to on its longer side: range 10–500, step 5, **default 100**. Aspect ratio is preserved; the short side is rounded to the nearest pixel (minimum 1).
 - The long edge applies immediately after upload, after a crop and whenever the slider moves.
-- **Canvas limit:** if the resulting circle canvas would exceed the browser's canvas limit, the long edge is lowered in steps of 5 (not below 10) until it fits, the slider updates, and a notice appears in the Step 2 status area. The long edge is not raised again automatically when a later change would fit; the user can move the slider back up. At the defaults, most images exceed the iOS limit, so the long edge is lowered on iPhone/iPad. Limits: iOS/iPadOS 16,777,216 px area and 16,384 px per side; other browsers 268,435,456 px area and 32,767 px per side.
+- **Canvas limit:** if the resulting circle canvas would exceed the browser's canvas limit, the long edge is lowered in steps of 5 (not below 10) until it fits, the slider updates, and a notice appears in the Step 2 status area. The long edge is not raised again automatically when a later change would fit; the user can move the slider back up. At the defaults (about 3,000×2,000 px for a 3:2 image) the canvas fits the iOS limit; larger max radius or long edge values can trigger it. Limits: iOS/iPadOS 16,777,216 px area and 16,384 px per side; other browsers 268,435,456 px area and 32,767 px per side.
 
 ### Circle Visualization
 - **Placement:** circle centers sit on a grid with pitch `P = 2 × max_radius` px. Source pixel (x, y) is drawn at `(x·P + m, y·P + m)`, where the edge margin `m = ceil(max_radius + max(1, stroke_width)/2) + 1`.
@@ -49,8 +49,8 @@ Terms: the **source image** is the upload (capped at 2000 px on its long edge) o
 
   | Parameter | Range | Step | Default |
   |---|---|---|---|
-  | Min circle radius | 1–5 px | 1 | 5 |
-  | Max circle radius | 10–30 px | 1 | 30 |
+  | Min circle radius | 1–5 px | 1 | 1 |
+  | Max circle radius | 10–30 px | 1 | 15 |
   | Stroke width | 1–3 px | 0.5 | 2 |
   | Spacing | 0–5 | 1 | 0 |
   | Long edge | 10–500 source px | 5 | 100 |
@@ -63,7 +63,7 @@ Terms: the **source image** is the upload (capped at 2000 px on its long edge) o
 - **Page:** one US Letter page, 612×792 pt. Landscape (792×612) when the rendered circle canvas is wider than tall; otherwise portrait.
 - **When:** the Download button is disabled while a render is in progress, so the export always matches the displayed render.
 - **Placement:** the circle canvas is embedded as a single PNG, scaled uniformly to the largest size that fits inside a **0.1 in (7.2 pt) margin** on every side, and centered.
-- **Resolution:** the embedded image keeps the canvas's full pixel size. At the defaults (long edge 100, max radius 30) the canvas is about 6,000 px on its long side, roughly 555 dpi on the limiting side (10.8 in for a 3:2 image).
+- **Resolution:** the embedded image keeps the canvas's full pixel size. At the defaults (long edge 100, max radius 15) the canvas is about 3,000 px on its long side, roughly 280 dpi on the limiting side (10.8 in for a 3:2 image).
 - **Filename:** `<original name without extension>-circles.pdf`.
 - **No metadata:** the PDF contains only the artwork; no document properties are written.
 - **Offline:** not supported. If pdf-lib cannot load, Download shows "PDF library not loaded. Please refresh the page."
@@ -168,7 +168,7 @@ js/pdflibExporter.js  PDFLibExporter: Letter page layout and PNG embedding
 
 Automated checks live in `test/app.test.js` (run `scripts/run-tests.sh`); their result labels start with the criterion number. The rest are manual.
 
-1. **Upload downsampling:** given a 1500×1000 PNG uploaded with defaults, the grid is 100×67 and the circle canvas is exactly 6004×4024. *(automated)*
+1. **Upload downsampling:** given a 1500×1000 PNG uploaded with defaults, the grid is 100×67 and the circle canvas is exactly 3004×2014. *(automated)*
 2. **No clipping:** given an all-black 4×3 image, the outermost circles on all four sides are drawn whole and no ink touches the canvas border, at stroke 2, stroke 3 and in fill mode. *(automated)*
 3. **Transparency:** a fully transparent pixel has grayscale 255. *(automated)*
 4. **Latest settings win:** starting a render cancels any render in progress; after rapid long-edge changes and a max-radius change mid-render, the final canvas matches the last values (4804×3204 for long edge 120, max radius 20). *(automated)*

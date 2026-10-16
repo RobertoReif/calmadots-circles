@@ -80,7 +80,7 @@ Status key: ✅ done · 🔶 in progress / partly done · ⬜ not started
 ## Remaining Work (in order)
 
 1. Narrow-screen crop overlay (Phase 6)
-2. Real-device check: crop by touch, default render on iPhone/iPad (long edge is lowered at defaults), export (Phases 3, 6)
+2. Real-device check: crop by touch, default render on iPhone/iPad, export (Phases 3, 6)
 3. Memory: reuse one offscreen canvas across renders; consider a lower desktop area cap (see Risks)
 4. Measure render/export time and PDF size (AC 13)
 5. PDF viewers (AC 12) and cross-browser pass (Phase 7)
@@ -126,6 +126,7 @@ Before pushing to `master` (which deploys Pages). Run scripts with `sh` because 
 | 2026-10-15 | Cancel stale renders instead of Web Workers | Fixes dropped/mixed slider updates; workers not needed at current sizes |
 | 2026-10-15 | Step 2 preview shown at full resolution | The downsampled grid looked blurry when scaled up for cropping |
 | 2026-10-16 | Downsample uploads over 2000px instead of rejecting | Phone photos are usually larger than 2000px; 2000px is plenty for preview, crop and up to 500 circles |
+| 2026-10-16 | Default radii back to min 1, max 15 (long edge stays 100) | Requested by the project owner; default canvas ≈ 3,000 px, within iOS limits |
 | 2026-10-16 | Circle color picker; one color for stroke and fill; white background | Requested by the project owner |
 | 2026-10-16 | Crop selection uses Pointer Events | Mouse-only selection made cropping impossible on touch devices |
 | 2026-10-16 | Export disabled during renders; orientation from the rendered canvas | Exporting mid-render could pair a new orientation with the old artwork |
@@ -136,7 +137,7 @@ Before pushing to `master` (which deploys Pages). Run scripts with `sh` because 
 | Risk | Mitigation |
 |------|-----------|
 | **Browser canvas size limits** (blank canvas) | Long edge lowered automatically. Limits are hard-coded, and iOS/iPadOS is detected from the user agent (`iPad`/`iPhone`/`iPod`, or `MacIntel` with touch points), which may misclassify some devices. Verify on real devices |
-| **Peak memory** | One upload can hold the 2000px source, a 2000px preview and overlay, an offscreen and an on-screen circle canvas (~24M px each at defaults, ~96 MB), plus the PNG during export. iOS Safari also caps total canvas memory. Mitigations: `toBlob` export (done); reuse one offscreen canvas (Remaining #3); measure on a phone |
+| **Peak memory** | One upload can hold the 2000px source, a 2000px preview and overlay, an offscreen and an on-screen circle canvas (~6M px each at defaults, ~24 MB; up to ~16.7M px each on iOS with larger settings), plus the PNG during export. iOS Safari also caps total canvas memory. Mitigations: `toBlob` export (done); reuse one offscreen canvas (Remaining #3); measure on a phone |
 | **Unit conversions** (grid px → canvas px → PDF pt) | One geometry function (`CircleVisualizer.getLayout`); exporter only scales the finished canvas; covered by tests |
 | **`docs/` drifting from source** | `scripts/sync-docs.sh --check` in the release checklist |
 | **Stale JS cached on Pages** | `?v=` cache-busting bump in the release checklist |
@@ -149,7 +150,6 @@ Before pushing to `master` (which deploys Pages). Run scripts with `sh` because 
 - Uploads are capped at 2000px on the long edge (larger images are downsampled); very large or animated files are untested on low-memory devices
 - GIFs use the first frame; SVG is rejected
 - PDF contains a raster image, not vector circles
-- At the defaults, iPhone/iPad renders use a lowered long edge for most images
 
 ## Future Enhancements (Post-MVP)
 

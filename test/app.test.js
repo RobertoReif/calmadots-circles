@@ -96,8 +96,8 @@ window.addEventListener('load', async () => {
 
         const ip = app.imageProcessor;
         ok(ip.currentWidth === 100 && ip.currentHeight === 67, `AC1 upload downsampled to ${ip.currentWidth}x${ip.currentHeight}`);
-        ok(app.circleCanvas.width === 6004 && app.circleCanvas.height === 4024,
-            `AC1 canvas is 6004x4024 per spec formula: ${app.circleCanvas.width}x${app.circleCanvas.height}`);
+        ok(app.circleCanvas.width === 3004 && app.circleCanvas.height === 2014,
+            `AC1 canvas is 3004x2014 per spec formula: ${app.circleCanvas.width}x${app.circleCanvas.height}`);
         ok(ip.grayscaleData[0] === 255, `AC3 transparent pixel reads as white (${ip.grayscaleData[0]})`);
         ok(app.grayscaleCanvas.width === 1500 && app.grayscaleCanvas.height === 1000,
             `preview at full resolution: ${app.grayscaleCanvas.width}x${app.grayscaleCanvas.height}`);

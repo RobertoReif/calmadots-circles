@@ -131,8 +131,8 @@ Edit CSS variables in `css/styles.css`:
 Modify default values in `js/canvas.js`:
 ```javascript
 this.config = {
-    minRadius: 5,      // pixels
-    maxRadius: 30,     // pixels
+    minRadius: 1,      // pixels
+    maxRadius: 15,     // pixels
     strokeWidth: 2,    // pixels
     spacing: 0,        // pixels skipped between samples
     color: '#000000',  // outline and fill color

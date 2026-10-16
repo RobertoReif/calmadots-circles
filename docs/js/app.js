@@ -540,8 +540,8 @@ class CircleSizeApp {
      * Reset configuration to defaults
      */
     async resetToDefaults() {
-        this.minRadiusSlider.value = 5;
-        this.maxRadiusSlider.value = 30;
+        this.minRadiusSlider.value = 1;
+        this.maxRadiusSlider.value = 15;
         this.strokeWidthSlider.value = 2;
         this.spacingSlider.value = 0;
         this.circleColorPicker.value = '#000000';
