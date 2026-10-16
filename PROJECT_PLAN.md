@@ -49,7 +49,7 @@ Status key: ✅ done · 🔶 in progress / partly done · ⬜ not started
 - ✅ Radius formula and adaptive stroke (`max(1, darkness × stroke)`, no rounding)
 - ✅ Grid pitch `2 × max_radius`, edge margin so no circle is clipped
 - ✅ Chunked rendering off-screen; a newer render cancels an older one
-- ✅ Controls: min/max radius, stroke, spacing, reset, fill toggle
+- ✅ Controls: min/max radius, stroke, spacing, circle color, reset, fill toggle
 - ⬜ Remember last-used settings in localStorage (optional)
 - **Done when:** acceptance criteria 2 and 4 pass
 
@@ -143,7 +143,6 @@ Before pushing to `master` (which deploys Pages):
 
 ## Future Enhancements (Post-MVP)
 
-- Custom circle colors
 - Other shape modes (dots, dashes)
 - Settings presets / remember last settings
 - Undo/redo

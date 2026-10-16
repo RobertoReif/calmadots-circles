@@ -401,6 +401,16 @@ a:hover {
     box-shadow: 0 2px 8px rgba(0, 119, 181, 0.3);
 }
 
+.color-picker {
+    width: 60px;
+    height: 36px;
+    padding: 2px;
+    border: 1px solid var(--color-border);
+    border-radius: 4px;
+    background: var(--color-bg);
+    cursor: pointer;
+}
+
 .control-value {
     font-size: 0.9rem;
     color: var(--color-text-tertiary);

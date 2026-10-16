@@ -13,6 +13,7 @@ Convert images into stunning circle-based visualizations where pixel darkness is
   - Stroke width (1–3px)
   - Spacing (sample every pixel, or skip up to 5)
   - Outline or filled circles
+  - Circle color picker
 - **PDF Export**: Download a US Letter PDF with the artwork centered inside a 0.1in margin
 - **Responsive Design**: Works on desktop, tablet, and mobile devices
 - **No Backend**: All processing happens in your browser—no data sent to servers
@@ -136,6 +137,7 @@ this.config = {
     maxRadius: 30,     // pixels
     strokeWidth: 2,    // pixels
     spacing: 0,        // pixels skipped between samples
+    color: '#000000',  // outline and fill color
 };
 ```
 The default long edge is set in `js/app.js` and on the slider in `src/index.html`.

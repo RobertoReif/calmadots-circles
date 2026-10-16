@@ -52,6 +52,8 @@ class CircleSizeApp {
         this.maxRadiusValue = document.getElementById('maxRadiusValue');
         this.strokeWidthValue = document.getElementById('strokeWidthValue');
         this.spacingValue = document.getElementById('spacingValue');
+        this.circleColorPicker = document.getElementById('circleColorPicker');
+        this.circleColorValue = document.getElementById('circleColorValue');
         this.resetButton = document.getElementById('resetButton');
 
         // Visualization section
@@ -117,6 +119,7 @@ class CircleSizeApp {
         this.maxRadiusSlider.addEventListener('input', (e) => this.handleConfigChange(e));
         this.strokeWidthSlider.addEventListener('input', (e) => this.handleConfigChange(e));
         this.spacingSlider.addEventListener('input', (e) => this.handleConfigChange(e));
+        this.circleColorPicker.addEventListener('input', (e) => this.handleConfigChange(e));
 
         // Reset button
         this.resetButton.addEventListener('click', () => this.resetToDefaults());
@@ -500,12 +503,14 @@ class CircleSizeApp {
         const maxRadius = parseInt(this.maxRadiusSlider.value, 10);
         const strokeWidth = parseFloat(this.strokeWidthSlider.value);
         const spacing = parseInt(this.spacingSlider.value, 10);
+        const color = this.circleColorPicker.value;
 
         // Update display values
         this.minRadiusValue.textContent = `${minRadius}px`;
         this.maxRadiusValue.textContent = `${maxRadius}px`;
         this.strokeWidthValue.textContent = `${strokeWidth}px`;
         this.spacingValue.textContent = `${spacing}px`;
+        this.circleColorValue.textContent = color;
 
         // Update visualizer config
         this.visualizer.updateConfig({
@@ -513,6 +518,7 @@ class CircleSizeApp {
             maxRadius,
             strokeWidth,
             spacing,
+            color,
         });
 
         // A larger max radius grows the canvas; shrink the long edge if it no longer fits
@@ -531,6 +537,7 @@ class CircleSizeApp {
         this.maxRadiusSlider.value = 30;
         this.strokeWidthSlider.value = 2;
         this.spacingSlider.value = 0;
+        this.circleColorPicker.value = '#000000';
 
         await this.handleConfigChange();
     }

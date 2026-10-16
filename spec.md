@@ -41,7 +41,8 @@ Units: **px** below means canvas pixels of the rendered circle image unless stat
   - Circles with radius < 0.5 px are skipped.
   - Because the pitch is `2 × max_radius`, the largest circles touch their neighbours; circles never overlap.
 - **Stroke:** `stroke = max(1, normalized_darkness × stroke_width)` px, so lighter circles get thinner outlines (minimum 1 px).
-- **Style:** black outline on white by default. A **Fill circles** checkbox draws solid black circles instead (no stroke).
+- **Style:** outline on a white background by default. A **Fill circles** checkbox draws solid circles instead (no stroke).
+- **Color:** a **Circle color** picker (default black, `#000000`) sets the color of both the outline and the fill. The background stays white.
 - **Spacing:** samples every `(spacing + 1)`th source pixel in each direction. 0 = every pixel; 2 = every 3rd pixel. Skipped pixels leave empty grid cells, so spacing adds gaps of `spacing × P` px.
 - **Configurable parameters:**
 
@@ -53,7 +54,7 @@ Units: **px** below means canvas pixels of the rendered circle image unless stat
   | Spacing | 0–5 | 1 | 0 |
   | Long edge | 10–500 source px | 5 | 100 |
 
-  A **Reset** button restores the circle defaults (radius, stroke, spacing).
+  A **Reset** button restores the circle defaults (radius, stroke, spacing, color).
 - **Responsiveness:** any change re-renders. A change made while a render is in progress cancels that render and starts a new one with the latest settings; the displayed image is always a complete render.
 
 ### Export to PDF

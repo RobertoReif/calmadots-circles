@@ -10,6 +10,7 @@ class CircleVisualizer {
             maxRadius: 30,
             strokeWidth: 2,
             spacing: 0,
+            color: '#000000',
         };
         this.renderToken = 0; // Incremented per render; a stale token cancels an in-flight render
     }
@@ -96,8 +97,8 @@ class CircleVisualizer {
         // Set white background
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-        ctx.fillStyle = '#000000';
-        ctx.strokeStyle = '#000000';
+        ctx.fillStyle = config.color;
+        ctx.strokeStyle = config.color;
 
         // Sample every (spacing + 1)th pixel
         const pixelStep = 1 + config.spacing;

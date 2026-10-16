@@ -96,6 +96,20 @@ window.addEventListener('load', async () => {
         ok(ip.originalWidth >= 700, `crop from full-res source: ${ip.originalWidth}x${ip.originalHeight}`);
         ok(await idle(), 'crop render finished');
 
+        // Circle color: circles are drawn in the picked color
+        app.circleColorPicker.value = '#ff0000';
+        app.circleColorPicker.dispatchEvent(new Event('input'));
+        ok(await idle(), 'color render finished');
+        const px = app.circleCanvas.getContext('2d').getImageData(0, 0, app.circleCanvas.width, app.circleCanvas.height).data;
+        let red = 0, black = 0;
+        for (let i = 0; i < px.length; i += 4) {
+            if (px[i] > 200 && px[i + 1] < 60 && px[i + 2] < 60) red++;
+            if (px[i] < 60 && px[i + 1] < 60 && px[i + 2] < 60) black++;
+        }
+        ok(red > 0 && black === 0, `circles drawn in picked color (red px: ${red}, black px: ${black})`);
+        await app.resetToDefaults();
+        ok(await idle() && app.circleColorPicker.value === '#000000', 'reset restores black');
+
         // iOS canvas limit: long edge is lowered so the canvas stays under ~16.7M pixels
         Object.defineProperty(navigator, 'userAgent', { get: () => 'Mozilla/5.0 (iPhone)' });
         setSlider(app.maxRadiusSlider, 30);
