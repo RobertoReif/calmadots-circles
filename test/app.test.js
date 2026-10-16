@@ -129,6 +129,23 @@ window.addEventListener('load', async () => {
         ok(ip.currentWidth === 120 && ip.currentHeight === 80 && app.circleCanvas.width === 4804 && app.circleCanvas.height === 3204,
             `AC4 final canvas reflects last slider values: ${app.circleCanvas.width}x${app.circleCanvas.height}`);
 
+        // AC14: brightness and contrast change the grid and the preview, and keep the crop selection
+        const grid = () => Array.from(ip.grayscaleData.filter((_, i) => i % 4 === 0));
+        const previewPixel = (fx) => app.grayscaleCanvas.getContext('2d').getImageData(Math.floor(fx * app.grayscaleCanvas.width), 0, 1, 1).data[0];
+        drag([0.5, 0], [1, 1], 'mouse');
+        const selectionBefore = JSON.stringify(app.cropSelection);
+        setSlider(app.brightnessSlider, 100);
+        ok(await idle() && grid().every(g => g === 255) && previewPixel(0.9) === 255,
+            'AC14 brightness 100 turns the grid and preview white');
+        setSlider(app.brightnessSlider, -100);
+        ok(await idle() && grid().every(g => g === 0), 'AC14 brightness -100 turns the grid black');
+        setSlider(app.brightnessSlider, 0);
+        setSlider(app.contrastSlider, -100);
+        ok(await idle() && grid().every(g => g === 128), 'AC14 contrast -100 flattens the grid to mid-gray');
+        setSlider(app.contrastSlider, 0);
+        ok(await idle() && grid().some(g => g === 0) && grid().some(g => g === 255) && JSON.stringify(app.cropSelection) === selectionBefore,
+            'AC14 back to 0 restores the grid and keeps the crop selection');
+
         // AC5: landscape image exports a landscape Letter page
         let page = await exportPdf();
         ok(page && page.width === 792 && page.height === 612, `AC5 Letter landscape page ${page && page.width}x${page && page.height}`);

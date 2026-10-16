@@ -19,6 +19,16 @@ Terms: the **source image** is the upload (capped at 2000 px on its long edge) o
 - Show image metadata after upload: filename, original dimensions, file size.
 - Convert to grayscale with `gray = round(0.299*R + 0.587*G + 0.114*B)`. Transparent pixels are composited onto white first, so they read as white.
 
+### Brightness & Contrast
+- Two sliders in Step 2, **Brightness** and **Contrast**, each −100 to 100, step 1, default 0.
+- They adjust grayscale values before circles are sized, so they change both the Step 2 preview and the circles. Contrast is applied first, then brightness:
+  ```
+  c = contrast × 2.55;  factor = 259(c + 255) / (255(259 − c))
+  gray' = clamp(factor × (gray − 128) + 128 + brightness × 2.55, 0, 255)
+  ```
+- Contrast −100 makes every pixel mid-gray; brightness ±100 makes every pixel white or black.
+- Changing them keeps the current crop selection, applies to later uploads and crops, and is not affected by Reset.
+
 ### Crop (US Letter)
 - The preview shows the source image in grayscale at its own resolution, scaled to 500 px on its long edge on screen.
 - The user drags a selection on the preview with mouse, touch or pen, and chooses **portrait (8.5:11)** or **landscape (11:8.5)**. The selection is constrained to that ratio while dragging, and switching orientation reshapes an existing selection to the new ratio.
@@ -56,7 +66,7 @@ Terms: the **source image** is the upload (capped at 2000 px on its long edge) o
   | Spacing | 0–5 | 1 | 0 |
   | Long edge | 10–500 source px | 5 | 100 |
 
-  A **Reset** button restores the circle defaults (radius, stroke, spacing, color). It does not change the long edge, the fill setting or the crop.
+  A **Reset** button restores the circle defaults (radius, stroke, spacing, color). It does not change the long edge, the fill setting, brightness/contrast or the crop.
 - **Responsiveness:** any change re-renders. A change made while a render is in progress cancels that render and starts a new one with the latest settings; the displayed image is always a complete render. If a render fails, the error appears in the Step 4 status area and the next change renders normally.
 
 ### Export to PDF
@@ -129,7 +139,7 @@ js/pdflibExporter.js  PDFLibExporter: Letter page layout and PNG embedding
 ## 5. User Workflow
 
 1. **Upload** → select or drop an image; it is downsampled to the long edge and rendered
-2. **Preview & crop** (optional) → drag a selection, choose portrait or landscape, crop
+2. **Preview & crop** (optional) → adjust brightness and contrast, drag a selection, choose portrait or landscape, crop
 3. **Configure** → adjust radius, stroke, spacing, color, long edge; toggle fill in step 4
 4. **Visualize** → circle image updates after each change
 5. **Export** → download the Letter PDF
@@ -182,3 +192,4 @@ Automated checks live in `test/app.test.js` (run `scripts/run-tests.sh`); their 
 11. **Render errors:** a failed render shows "Rendering error: …" with the progress bar intact, and the next render succeeds. *(automated)*
 12. **Viewers:** the exported PDF opens correctly in Preview, Chrome and Adobe Reader. *(manual)*
 13. **Performance:** with defaults and a 1000×1000 upload on desktop Chrome, the first render and the PDF export each finish in under 3 s, and the PDF is under 10 MB. *(manual, not yet measured)*
+14. **Brightness & contrast:** brightness 100 turns the grid and preview white; brightness −100 turns the grid black; contrast −100 makes the grid mid-gray; returning to 0 restores the grid and keeps the crop selection. *(automated)*

@@ -37,6 +37,10 @@ class CircleSizeApp {
         this.cropOrientationRadios = document.querySelectorAll('input[name="cropOrientation"]');
         this.cropButton = document.getElementById('cropButton');
         this.cropStatus = document.getElementById('cropStatus');
+        this.brightnessSlider = document.getElementById('brightnessSlider');
+        this.contrastSlider = document.getElementById('contrastSlider');
+        this.brightnessValue = document.getElementById('brightnessValue');
+        this.contrastValue = document.getElementById('contrastValue');
 
         // Crop selection state
         this.cropSelection = null; // Will store {startX, startY, endX, endY}
@@ -105,6 +109,10 @@ class CircleSizeApp {
                 this.handleCrop(selectedOrientation);
             });
         }
+
+        // Brightness / contrast
+        this.brightnessSlider.addEventListener('input', () => this.handleToneChange());
+        this.contrastSlider.addEventListener('input', () => this.handleToneChange());
 
         // Selection canvas
         if (this.selectionCanvas) {
@@ -576,6 +584,27 @@ class CircleSizeApp {
             }
         } catch (error) {
             this.showProcessingError(`Rendering error: ${error.message}`);
+        }
+    }
+
+    /**
+     * Handle brightness/contrast change: redraw the preview (keeping any crop selection),
+     * rebuild the grid and re-render circles
+     */
+    async handleToneChange() {
+        const brightness = parseInt(this.brightnessSlider.value, 10);
+        const contrast = parseInt(this.contrastSlider.value, 10);
+        this.brightnessValue.textContent = `${brightness}`;
+        this.contrastValue.textContent = `${contrast}`;
+        this.imageProcessor.adjustments = { brightness, contrast };
+
+        if (!this.imageProcessor.sourceImage) return;
+        try {
+            this.imageProcessor.drawGrayscalePreview(this.grayscaleCanvas);
+            this.prepareImage();
+            await this.renderCircles();
+        } catch (error) {
+            this.showProcessingError(`Adjustment error: ${error.message}`);
         }
     }
 

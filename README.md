@@ -6,6 +6,7 @@ Convert images into stunning circle-based visualizations where pixel darkness is
 
 - **Image Upload**: Drag & drop or select JPG, PNG, WebP, or GIF images
 - **Grayscale Conversion**: Automatic grayscale preview
+- **Brightness & contrast**: Adjust the grayscale image before it becomes circles
 - **Crop**: Drag to select a US Letter (8.5×11) portrait or landscape crop
 - **Resolution**: Long-edge slider (10–500 pixels, default 100) sets how many circles span the image
 - **Circle Visualization**: Convert pixels to circles with customizable parameters
@@ -38,7 +39,7 @@ Visit: https://robertoreif.github.io/calmadots-circles/
 ## Usage
 
 1. **Upload**: Click or drag an image onto the upload area
-2. **Preview & crop**: View the grayscale preview and optionally crop to Letter proportions
+2. **Preview & crop**: Adjust brightness and contrast, and optionally crop to Letter proportions
 3. **Configure**: Adjust circle size, stroke width, spacing and long edge
 4. **Visualize**: The circle visualization re-renders after each change
 5. **Export**: Download as PDF

@@ -17,7 +17,7 @@ Status key: ✅ done · 🔶 in progress / partly done · ⬜ not started
 | 4. Circle visualization | ✅ | Grid layout, cancellable chunked render, fill toggle, color picker |
 | 5. PDF export | 🔶 | Letter, 0.1in margin, disabled during renders; viewer testing and measurements not done |
 | 6. UI/UX & responsiveness | 🔶 | Styled per style guide; narrow-screen crop overlay broken; mobile layout not verified |
-| 7. Testing, docs & deployment | 🔶 | Deployed; automated tests (AC 1–11) and docs current; cross-browser/real-device pass not done |
+| 7. Testing, docs & deployment | 🔶 | Deployed; automated tests (AC 1–11, 14) and docs current; cross-browser/real-device pass not done |
 
 ---
 
@@ -42,8 +42,9 @@ Status key: ✅ done · 🔶 in progress / partly done · ⬜ not started
 - ✅ Long-edge slider (10–500, step 5, default 100), applied on upload, crop and slider change
 - ✅ Canvas-limit check lowers the long edge with a notice (iOS 16.7M px / 16,384 px side; others 268M px / 32,767 px side)
 - ✅ Full-resolution grayscale preview
+- ✅ Brightness and contrast sliders (−100..100) applied to the preview and the grid
 - ✅ Crop selection with Pointer Events (mouse, touch, pen), constrained to 8.5:11 or 11:8.5; switching orientation reshapes it; crop taken from the source image
-- **Done when:** AC 6 and 7 pass (automated), plus the manual checks in AC 6 and 7 on a real phone
+- **Done when:** AC 6, 7 and 14 pass (automated), plus the manual checks in AC 6 and 7 on a real phone
 
 ## Phase 4: Circle Visualization ✅
 - ✅ Radius formula and adaptive stroke (`max(1, darkness × stroke)`, no rounding)
@@ -69,7 +70,7 @@ Status key: ✅ done · 🔶 in progress / partly done · ⬜ not started
 ## Phase 7: Testing, Documentation & Deployment 🔶
 - ✅ Deployed via GitHub Pages from `docs/`
 - ✅ `scripts/sync-docs.sh` mirrors `src/index.html`, `js/`, `css/` into `docs/`; `--check` verifies
-- ✅ Automated end-to-end checks: `scripts/run-tests.sh` (headless Chrome, `test/app.test.js`, AC 1–11)
+- ✅ Automated end-to-end checks: `scripts/run-tests.sh` (headless Chrome, `test/app.test.js`, AC 1–11 and 14)
 - ✅ README and spec match the app
 - ⬜ Cross-browser pass: Chrome, Edge, Firefox (macOS/Windows), Safari (macOS), iOS Safari and Chrome Android on real devices
 - ⬜ Accessibility pass: all controls reachable by keyboard, visible focus, `aria-live` status messages, Lighthouse accessibility ≥ 90
@@ -128,6 +129,7 @@ Before pushing to `master` (which deploys Pages). Run scripts with `sh` because 
 | 2026-10-16 | Downsample uploads over 2000px instead of rejecting | Phone photos are usually larger than 2000px; 2000px is plenty for preview, crop and up to 500 circles |
 | 2026-10-16 | Default radii back to min 1, max 15 (long edge stays 100) | Requested by the project owner; default canvas ≈ 3,000 px, within iOS limits |
 | 2026-10-16 | Min radius range 0–5, default 0 | Requested by the project owner: white pixels draw no circle |
+| 2026-10-16 | Brightness and contrast sliders in Step 2 (instead of saturation) | Saturation has no effect after grayscale conversion; brightness/contrast change circle sizes |
 | 2026-10-16 | Circle color picker; one color for stroke and fill; white background | Requested by the project owner |
 | 2026-10-16 | Crop selection uses Pointer Events | Mouse-only selection made cropping impossible on touch devices |
 | 2026-10-16 | Export disabled during renders; orientation from the rendered canvas | Exporting mid-render could pair a new orientation with the old artwork |

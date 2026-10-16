@@ -61,6 +61,37 @@
                     </div>
                 </div>
 
+                <!-- Tone Adjustments -->
+                <div class="controls-grid">
+                    <div class="control-item">
+                        <label for="brightnessSlider">Brightness:</label>
+                        <input
+                            type="range"
+                            id="brightnessSlider"
+                            min="-100"
+                            max="100"
+                            value="0"
+                            step="1"
+                            class="slider"
+                        >
+                        <span id="brightnessValue" class="control-value">0</span>
+                    </div>
+
+                    <div class="control-item">
+                        <label for="contrastSlider">Contrast:</label>
+                        <input
+                            type="range"
+                            id="contrastSlider"
+                            min="-100"
+                            max="100"
+                            value="0"
+                            step="1"
+                            class="slider"
+                        >
+                        <span id="contrastValue" class="control-value">0</span>
+                    </div>
+                </div>
+
                 <div class="preview-container">
                     <div class="preview-image-wrapper">
                         <h3>Grayscale Preview</h3>
@@ -222,9 +253,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
 
     <!-- Then our modules -->
-    <script src="../js/imageProcessor.js?v=10"></script>
-    <script src="../js/canvas.js?v=10"></script>
-    <script src="../js/pdflibExporter.js?v=10"></script>
-    <script src="../js/app.js?v=10"></script>
+    <script src="../js/imageProcessor.js?v=11"></script>
+    <script src="../js/canvas.js?v=11"></script>
+    <script src="../js/pdflibExporter.js?v=11"></script>
+    <script src="../js/app.js?v=11"></script>
 </body>
 </html>
